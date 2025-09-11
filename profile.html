@@ -1,13 +1,65 @@
 <!-- profile.html -->
 <style>
   .profile-content {
-    padding: 2vw;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    height: 100%;
+  }
+  .profile-form {
+    margin-left: 0;
+    width: 60%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .profile-field {
+    width: 100%;
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .profile-field label {
+    margin-bottom: 4px;
     font-size: calc(var(--vw) * 2);
+    font-weight: 500;
+    color: #333;
+    text-align: left;
+  }
+  .profile-field input {
+    width: 100%;
+    height: 8vh;
+    font-size: calc(var(--vw) * 2);
+    padding: 6px 10px;
+    box-sizing: border-box;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    background: #fff;
+    color: #333;
+    text-align: left;
   }
 </style>
 <div class="profile-content">
-  <h2>Profile Screen</h2>
-  <p>This is the profile screen content.</p>
+  <form class="profile-form">
+    <div class="profile-field">
+      <label for="nickname">Nickname</label>
+      <input type="text" id="nickname" name="nickname" placeholder="Enter nickname">
+    </div>
+    <div class="profile-field">
+      <label for="licence">Licence</label>
+      <input type="text" id="licence" name="licence" placeholder="Enter licence">
+    </div>
+    <div class="profile-field">
+      <label for="version">Version</label>
+      <input type="text" id="version" name="version" placeholder="Enter version">
+    </div>
+    <div class="profile-field">
+      <label for="backupPrefix">Backup Prefix</label>
+      <input type="text" id="backupPrefix" name="backupPrefix" placeholder="Enter backup prefix">
+    </div>
+  </form>
 </div>
 <script>
   // Profile-specific JS can go here

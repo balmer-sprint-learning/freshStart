@@ -29,10 +29,11 @@
     }
     /* Example usage of custom units */
     .responsive-box {
-      width: calc(var(--vw) * 98); /* 98vw */
-      height: calc(var(--vh) * 98); /* 98vh */
+      width: 100vw;
+      height: 100vh;
       background: #fff;
-      border-radius: calc(var(--vw) * 2);
+      border-radius: 0;
+  position: relative;
       box-shadow: 0 0 calc(var(--vw) * 1) rgba(0,0,0,0.1);
       border: 1pt solid #333;
       display: flex;
@@ -109,19 +110,63 @@
     .bordered {
       border: 1pt solid #333;
     }
-    .screen-container {
-      width: 90%;
-      margin-left: 5%;
-      margin-right: 5%;
-      margin-top: 2vh;
-      margin-bottom: 2vh;
-      min-height: 40vh;
-      min-width: 80vw;
+  /* content area now places form directly; removed separate screen-container */
+    .profile {
+      position: absolute;
+      top: 20vh; /* 20% from top of viewport */
+      left: 0;
+      width: 100%;
+      display: none; /* shown only when F3 pressed */
       box-sizing: border-box;
+    }
+    .profile-title {
+      width: 60%;
+      margin-left: 10vw; /* align with .profile-form left edge */
+      text-align: center;
+      font-weight: 700;
+      font-size: calc(var(--vh) * 3);
+      margin-bottom: 1vh;
+    }
+    .profile-content {
       display: flex;
       flex-direction: column;
-      justify-content: center;
-      align-items: center;
+      align-items: flex-start;
+      width: 100%;
+      height: auto;
+      padding-bottom: 10vh;
+    }
+    .profile-form {
+      margin-left: 10vw; /* 10% from left edge of viewport */
+      width: 60%;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .profile-field {
+      width: 100%;
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .profile-field label {
+      margin-bottom: 4px;
+      font-size: calc(var(--vh) * 2); /* proportional to viewport height */
+      font-weight: 500;
+      color: #333;
+      text-align: left;
+    }
+    .profile-field input {
+      width: 100%;
+      height: 8vh;
+      font-size: calc(var(--vh) * 2); /* proportional and larger */
+      padding: 6px 10px;
+      box-sizing: border-box;
+      border: 1px solid #aaa;
+      border-radius: 4px;
+      background: #fff;
+      color: #333;
+      text-align: left;
     }
   </style>
 </head>
@@ -136,43 +181,53 @@
         </div>
       </div>
       <div class="skeleton-content">
-        <div id="screen-container" class="screen-container"></div>
+        <!-- Profile form placed directly inside the responsive skeleton -->
+        <div class="profile">
+          <div class="profile-content">
+            <h1 class="profile-title">My Profile</h1>
+            <form class="profile-form">
+            <div class="profile-field">
+              <label for="nickname">Nickname</label>
+              <input type="text" id="nickname" name="nickname" placeholder="Enter nickname">
+            </div>
+            <div class="profile-field">
+              <label for="licence">Licence</label>
+              <input type="text" id="licence" name="licence" placeholder="Enter licence">
+            </div>
+            <div class="profile-field">
+              <label for="version">Version</label>
+              <input type="text" id="version" name="version" placeholder="Enter version">
+            </div>
+            <div class="profile-field">
+              <label for="backupPrefix">Backup Prefix</label>
+              <input type="text" id="backupPrefix" name="backupPrefix" placeholder="Enter backup prefix">
+            </div>
+            </form>
+          </div>
+        </div>
       </div>
       <div class="skeleton-footer">
         <div class="footer-fields">
-          <button class="footer-field" onclick="loadScreen('profile.html')">F1</button>
-          <button class="footer-field" onclick="loadScreen('action.html')">F2</button>
-          <button class="footer-field" onclick="loadScreen('overview.html')">F3</button>
+          <button class="footer-field" onclick="setTheme('yellow','F1')">F1</button>
+          <button class="footer-field" onclick="setTheme('rgb(225,255,255)','F2')">F2</button>
+          <button class="footer-field" onclick="setTheme('rgb(225,225,255)','F3')">F3</button>
         </div>
       </div>
     </div>
   </div>
+  <!-- Dynamic loader removed; profile form is embedded directly for now -->
   <script>
-function loadScreen(file) {
-  fetch(file)
-    .then(response => response.text())
-    .then(html => {
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = html;
-      // Remove any style tags from loaded content
-      Array.from(tempDiv.querySelectorAll('style')).forEach(tag => tag.remove());
-      // Insert only the inner HTML of the main content div
-      let content = tempDiv.querySelector('div');
-      const container = document.getElementById('screen-container');
-      container.innerHTML = content ? content.innerHTML : html;
-      // Set background color on .responsive-box directly
-      const bgMap = {
-        'profile.html': 'rgb(240,255,240)',
-        'action.html': 'rgb(240,240,255)',
-        'overview.html': 'rgb(255,255,240)'
-      };
-      document.querySelector('.responsive-box').style.background = bgMap[file] || '#fff';
-    });
-}
-// Load profile by default
-window.onload = function() {
-  loadScreen('profile.html');
-};
-</script>
-</body>
-</html>
+  let lastPressed = null;
+  function setTheme(color, id) {
+    document.querySelector('.responsive-box').style.background = color;
+    lastPressed = id;
+    const profileDiv = document.querySelector('.profile');
+    if (lastPressed === 'F3') {
+      profileDiv.style.display = 'block';
+    } else {
+      profileDiv.style.display = 'none';
+    }
+  }
+  </script>
+ </body>
+ </html>
