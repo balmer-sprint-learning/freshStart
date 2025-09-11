@@ -169,3 +169,120 @@ position: relative;
   text-align: left;
   box-shadow: 0 1px 2px rgba(2,6,23,0.04);
 }
+
+/* Screen container divs - responsive layout between header and footer */
+.screen-profile,
+.screen-start,
+.screen-action {
+  width: 100%;
+  height: 100%; /* fill the skeleton-content container */
+  display: none; /* hidden by default */
+  box-sizing: border-box;
+  overflow-y: auto; /* allow scrolling if content exceeds height */
+  padding: calc(var(--vh) * 2); /* responsive padding */
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* Show active screen */
+.screen-profile.active,
+.screen-start.active,
+.screen-action.active {
+  display: flex; /* use flex when active for proper layout */
+}
+
+/* Individual screen styling */
+.screen-profile {
+  background: rgba(225, 225, 255, 0.1); /* light blue tint */
+}
+
+.screen-start {
+  background: rgba(255, 255, 225, 0.1); /* light yellow tint */
+}
+
+.screen-action {
+  background: rgba(225, 255, 255, 0.1); /* light cyan tint */
+}
+
+/* Profile form styling */
+.profile-form {
+  width: 100%;
+  max-width: calc(var(--vw) * 60); /* responsive max width */
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--vh) * 3); /* responsive spacing between fields */
+  padding: calc(var(--vh) * 2);
+}
+
+.profile-field {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.profile-field label {
+  font-size: calc(var(--vh) * 2.5);
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: calc(var(--vh) * 1);
+  text-align: left;
+}
+
+.profile-field input {
+  width: 100%;
+  height: calc(var(--vh) * 8);
+  font-size: calc(var(--vh) * 3);
+  padding: calc(var(--vh) * 1.5) calc(var(--vw) * 2);
+  box-sizing: border-box;
+  border: 2px solid #e5e7eb;
+  border-radius: calc(var(--vh) * 1.5);
+  background: #ffffff;
+  color: #1f2937;
+  transition: all 0.2s ease;
+}
+
+.profile-field input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.profile-field input::placeholder {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.profile-field input[readonly] {
+  background: #f9fafb;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+/* Start button styling */
+.start-button {
+  width: 100%;
+  height: calc(var(--vh) * 10);
+  background: #1e3a8a; /* dark blue */
+  color: white;
+  font-size: calc(var(--vh) * 3.5);
+  font-weight: 700;
+  border: none;
+  border-radius: calc(var(--vh) * 2);
+  cursor: pointer;
+  margin-top: calc(var(--vh) * 4);
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.start-button:hover {
+  background: #1e40af;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(30, 58, 138, 0.3);
+}
+
+.start-button:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 15px rgba(30, 58, 138, 0.2);
+}

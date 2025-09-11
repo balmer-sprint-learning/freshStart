@@ -20,63 +20,30 @@
         </div>
       </div>
       <div class="skeleton-content">
-        <!-- Screen 1: F1 Content -->
-        <div class="screen" id="screen-f1">
-          <div class="screen-content">
-            <h1 class="screen-title">Screen F1</h1>
-            <form class="screen-form">
-              <div class="form-field">
-                <label for="f1-field1">Field 1</label>
-                <input type="text" id="f1-field1" name="f1-field1" placeholder="Enter field 1">
-              </div>
-              <div class="form-field">
-                <label for="f1-field2">Field 2</label>
-                <input type="text" id="f1-field2" name="f1-field2" placeholder="Enter field 2">
-              </div>
-            </form>
-          </div>
+        <div class="screen-profile active">
+          <form class="profile-form">
+            <div class="profile-field">
+              <label for="nickname">Nickname</label>
+              <input type="text" id="nickname" name="nickname" placeholder="nickname 2 letters" maxlength="2">
+            </div>
+            <div class="profile-field">
+              <label for="licence">Licence</label>
+              <input type="text" id="licence" name="licence" placeholder="calculated" readonly>
+            </div>
+            <div class="profile-field">
+              <label for="version">Version</label>
+              <input type="text" id="version" name="version" placeholder="Enter version">
+            </div>
+            <div class="profile-field">
+              <label for="prefix">Prefix</label>
+              <input type="text" id="prefix" name="prefix" placeholder="calculated" readonly>
+            </div>
+            <button type="button" class="start-button">Start my 31 days now!</button>
+          </form>
         </div>
-
-        <!-- Screen 2: F2 Content -->
-        <div class="screen" id="screen-f2">
-          <div class="screen-content">
-            <h1 class="screen-title">Screen F2</h1>
-            <form class="screen-form">
-              <div class="form-field">
-                <label for="f2-field1">Overview Item</label>
-                <input type="text" id="f2-field1" name="f2-field1" placeholder="Enter overview item">
-              </div>
-              <div class="form-field">
-                <label for="f2-field2">Summary</label>
-                <input type="text" id="f2-field2" name="f2-field2" placeholder="Enter summary">
-              </div>
-            </form>
-          </div>
+        <div class="screen-start">
         </div>
-
-        <!-- Screen 3: F3 Profile -->
-        <div class="screen" id="screen-f3">
-          <div class="screen-content">
-            <h1 class="screen-title">My Profile</h1>
-            <form class="screen-form">
-              <div class="form-field">
-                <label for="nickname">Nickname</label>
-                <input type="text" id="nickname" name="nickname" placeholder="Enter nickname (max 5 chars)" maxlength="5">
-              </div>
-              <div class="form-field">
-                <label for="licence">Licence</label>
-                <input type="text" id="licence" name="licence" placeholder="Enter licence">
-              </div>
-              <div class="form-field">
-                <label for="version">Version</label>
-                <input type="text" id="version" name="version" placeholder="Enter version">
-              </div>
-              <div class="form-field">
-                <label for="backupPrefix">Backup Prefix</label>
-                <input type="text" id="backupPrefix" name="backupPrefix" placeholder="Enter backup prefix">
-              </div>
-            </form>
-          </div>
+        <div class="screen-action">
         </div>
       </div>
       <div class="skeleton-footer">
