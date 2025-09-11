@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FreshStart App</title>
+  <style>
+    :root {
+      /* Responsive units: 1vw = 1% viewport width, 1vh = 1% viewport height */
+      --vw: calc(100vw / 100);
+      --vh: calc(100vh / 100);
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+      background: #f8f9fa;
+    }
+    .app-skeleton {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #e9ecef;
+    }
+    /* Example usage of custom units */
+    .responsive-box {
+      width: calc(var(--vw) * 98); /* 98vw */
+      height: calc(var(--vh) * 98); /* 98vh */
+      background: #fff;
+      border-radius: calc(var(--vw) * 2);
+      box-shadow: 0 0 calc(var(--vw) * 1) rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: flex-start;
+      font-size: calc(var(--vw) * 2);
+      color: #333;
+    }
+    .skeleton-header, .skeleton-footer {
+      height: 10vh;
+      background: rgb(0,119,123);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: calc(var(--vw) * 2);
+      font-weight: bold;
+    }
+      .header-field {
+        flex: 1;
+        text-align: center;
+        font-size: calc(var(--vw) * 4);
+        /* Responsive font size, twice the header */
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+      }
+    .skeleton-content {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .footer-fields {
+      width: 90%;
+      margin-left: 5%;
+      margin-right: 5%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 100%;
+    }
+    .footer-field {
+      flex: 1;
+      text-align: center;
+      font-size: calc(var(--vw) * 4);
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+    .header-fields {
+      width: 90%;
+      margin-left: 5%;
+      margin-right: 5%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-skeleton">
+    <div class="responsive-box">
+      <div class="skeleton-header">
+        <div class="header-fields">
+          <div class="header-field">h1</div>
+          <div class="header-field">h2</div>
+          <div class="header-field">h3</div>
+        </div>
+      </div>
+      <div class="skeleton-content">Responsive Skeleton</div>
+      <div class="skeleton-footer">
+        <div class="footer-fields">
+          <div class="footer-field">F1</div>
+          <div class="footer-field">F2</div>
+          <div class="footer-field">F3</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
