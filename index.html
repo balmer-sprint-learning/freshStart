@@ -87,6 +87,14 @@
       align-items: center;
       justify-content: center;
       color: #fff;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      outline: none;
+      height: 100%;
+    }
+    .footer-field:active, .footer-field:focus {
+      background: rgba(0,119,123,0.2);
     }
     .header-fields {
       width: 90%;
@@ -101,6 +109,20 @@
     .bordered {
       border: 1pt solid #333;
     }
+    .screen-container {
+      width: 90%;
+      margin-left: 5%;
+      margin-right: 5%;
+      margin-top: 2vh;
+      margin-bottom: 2vh;
+      min-height: 40vh;
+      min-width: 80vw;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
   </style>
 </head>
 <body>
@@ -113,15 +135,44 @@
           <div class="header-field">h3</div>
         </div>
       </div>
-      <div class="skeleton-content"></div>
+      <div class="skeleton-content">
+        <div id="screen-container" class="screen-container"></div>
+      </div>
       <div class="skeleton-footer">
         <div class="footer-fields">
-          <div class="footer-field">F1</div>
-          <div class="footer-field">F2</div>
-          <div class="footer-field">F3</div>
+          <button class="footer-field" onclick="loadScreen('profile.html')">F1</button>
+          <button class="footer-field" onclick="loadScreen('action.html')">F2</button>
+          <button class="footer-field" onclick="loadScreen('overview.html')">F3</button>
         </div>
       </div>
     </div>
   </div>
+  <script>
+function loadScreen(file) {
+  fetch(file)
+    .then(response => response.text())
+    .then(html => {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
+      // Remove any style tags from loaded content
+      Array.from(tempDiv.querySelectorAll('style')).forEach(tag => tag.remove());
+      // Insert only the inner HTML of the main content div
+      let content = tempDiv.querySelector('div');
+      const container = document.getElementById('screen-container');
+      container.innerHTML = content ? content.innerHTML : html;
+      // Set background color on .responsive-box directly
+      const bgMap = {
+        'profile.html': 'rgb(240,255,240)',
+        'action.html': 'rgb(240,240,255)',
+        'overview.html': 'rgb(255,255,240)'
+      };
+      document.querySelector('.responsive-box').style.background = bgMap[file] || '#fff';
+    });
+}
+// Load profile by default
+window.onload = function() {
+  loadScreen('profile.html');
+};
+</script>
 </body>
 </html>
