@@ -9,6 +9,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="general.js"></script>
+  <script src="profile.js"></script>
+  <script src="start.js"></script>
+  <script src="action.js"></script>
 </head>
 <body>
   <div class="app-skeleton">
@@ -82,77 +86,5 @@
     </div>
   </div>
   <!-- Dynamic loader removed; profile form is embedded directly for now -->
-  <script>
-  // Screen switching with background colors
-  const themes = {
-    'f1': 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #f8fafc 100%)', // soft blue-gray gradient for start screen
-    'f2': 'rgb(225,255,255)', // light cyan for action screen  
-    'f3': 'rgb(225,225,255)'  // light blue for profile screen
-  };
-
-  function showScreen(screenId) {
-    // Hide all screens
-    const screens = document.querySelectorAll('.screen-profile, .screen-start, .screen-action');
-    screens.forEach(screen => screen.classList.remove('active'));
-    
-    // Show the selected screen
-    let targetScreen;
-    switch(screenId) {
-      case 'f1':
-        targetScreen = document.querySelector('.screen-start');
-        break;
-      case 'f2':
-        targetScreen = document.querySelector('.screen-action');
-        break;
-      case 'f3':
-        targetScreen = document.querySelector('.screen-profile');
-        break;
-    }
-    
-    if (targetScreen) {
-      targetScreen.classList.add('active');
-    }
-    
-    // Set background color
-    document.querySelector('.responsive-box').style.background = themes[screenId];
-  }
-
-  // Show F3 (profile) by default
-  showScreen('f3');
-
-  // Initialize Chart.js when the page loads
-  document.addEventListener('DOMContentLoaded', function() {
-    const ctx = document.getElementById('retentionChart').getContext('2d');
-    const retentionChart = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: ['First Slice', 'Second Slice', 'Third Slice', 'Fourth Slice'],
-        datasets: [{
-          data: [300, 150, 50, 250],
-          backgroundColor: [
-            'rgb(0,119,123)',      // first slice - original color
-            'rgba(0,119,123,0.7)',  // second slice - lighter
-            'rgba(0,119,123,0.4)',  // third slice - lighter still
-            'rgba(0,119,123,0.1)'   // fourth slice - super faint almost white
-          ],
-          borderWidth: 0,
-          cutout: '60%' // creates the doughnut hole
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        plugins: {
-          legend: {
-            display: false // hide legend for cleaner look
-          },
-          tooltip: {
-            enabled: true
-          }
-        }
-      }
-    });
-  });
-  </script>
  </body>
  </html>
