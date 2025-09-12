@@ -152,7 +152,7 @@ A responsive single-page web application with three main screens: Profile, Start
 ### Data Manager Functions (dataManager.js)
 | Function Name | Purpose | Screen | Notes |
 |---------------|---------|---------|-------|
-| `parseTSV(tsvContent, filename)` | Parse TSV files with comments/headers | All | Core TSV parser with timing |
+| `parseTSV(tsvContent, filename)` | Parse TSV files with comments/headers | All | Reads `# headerRow = X` comments for precise parsing |
 | `loadEventsData(tsvContent)` | Load and analyze events.tsv | All | Returns events + analytics |
 | `loadUserData(tsvContent)` | Load and analyze userData.tsv | All | Returns user data + level analytics |
 | `loadTestScores(tsvContent)` | Load and analyze testScores.tsv | All | Returns scores + skill analytics |
@@ -162,6 +162,12 @@ A responsive single-page web application with three main screens: Profile, Start
 | `logPerformance(func, source, time, error)` | Log function execution timing | All | Performance monitoring |
 | `getPerformanceSummary()` | Get timing statistics summary | All | Returns performance metrics |
 | `clearPerformanceLog()` | Clear performance log | All | Reset timing data |
+
+### TSV File Format Support
+- **Comment lines**: Start with `#` (automatically skipped)
+- **Header location**: Use `# headerRow = X` to specify exact header row number
+- **Fallback parsing**: If no headerRow comment, finds first non-comment line
+- **Performance tracking**: All parsing operations are timed and logged
 
 ### Variables & Objects
 | Name | Type | Purpose | Screen | Notes |

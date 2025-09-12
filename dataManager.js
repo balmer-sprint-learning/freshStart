@@ -20,25 +20,41 @@ class DataManager {
         
         try {
             const lines = tsvContent.trim().split('\n');
-            let dataStartIndex = 0;
+            let headerRowIndex = null;
             
-            // Skip comment lines (starting with # or empty lines)
-            while (dataStartIndex < lines.length && 
-                   (lines[dataStartIndex].trim() === '' || 
-                    lines[dataStartIndex].trim().startsWith('#'))) {
-                dataStartIndex++;
+            // Look for headerRow comment to find exact header location
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line.startsWith('# headerRow =') || line.startsWith('#headerRow =')) {
+                    const match = line.match(/headerRow\s*=\s*(\d+)/);
+                    if (match) {
+                        headerRowIndex = parseInt(match[1]) - 1; // Convert to 0-based index
+                        break;
+                    }
+                }
             }
             
-            if (dataStartIndex >= lines.length) {
-                throw new Error('No data found in TSV file');
+            // If no headerRow comment found, fall back to old method
+            if (headerRowIndex === null) {
+                headerRowIndex = 0;
+                // Skip comment lines (starting with # or empty lines)
+                while (headerRowIndex < lines.length && 
+                       (lines[headerRowIndex].trim() === '' || 
+                        lines[headerRowIndex].trim().startsWith('#'))) {
+                    headerRowIndex++;
+                }
             }
             
-            // First non-comment line is headers
-            const headers = lines[dataStartIndex].split('\t').map(h => h.trim());
+            if (headerRowIndex >= lines.length) {
+                throw new Error('No header row found in TSV file');
+            }
+            
+            // Get headers from specified row
+            const headers = lines[headerRowIndex].split('\t').map(h => h.trim());
             const rows = [];
             
-            // Parse data rows
-            for (let i = dataStartIndex + 1; i < lines.length; i++) {
+            // Parse data rows (skip comments and empty lines)
+            for (let i = headerRowIndex + 1; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (line && !line.startsWith('#')) {
                     const values = line.split('\t').map(v => v.trim());
@@ -59,6 +75,9 @@ class DataManager {
                 headers,
                 rows,
                 filename,
+                headerRowIndex: headerRowIndex + 1, // Return 1-based for user reference
+                totalLines: lines.length,
+                dataRows: rows.length,
                 executionTime
             };
             
