@@ -88,8 +88,12 @@
         <button onclick="loadEventsOnly()">Load Events Only</button>
         <button onclick="loadUserDataOnly()">Load User Data Only</button>
         <button onclick="loadTestScoresOnly()">Load Test Scores Only</button>
+        <button onclick="reloadAllData()" style="background: #fd7e14;">🔄 Reload All Data</button>
+        <button onclick="clearStorageData()" style="background: #dc3545;">🗑️ Clear Storage</button>
+        <button onclick="showStorageStatus()" style="background: #6f42c1;">📊 Storage Status</button>
         <button onclick="clearLogs()">Clear Performance Log</button>
         <button onclick="quickEventCount()" style="background: #28a745;">🔢 Quick Event Count</button>
+        <button onclick="location.reload()" style="background: #6c757d;">🔄 Refresh Page</button>
         
         <div id="loadResults"></div>
     </div>
@@ -146,36 +150,50 @@
             resultsDiv.innerHTML = `<div class="${className}">${message}</div>`;
         }
 
-        async function loadFile(filename) {
-            try {
-                const response = await fetch(`data/${filename}`);
-                if (!response.ok) {
-                    throw new Error(`Failed to load ${filename}: ${response.status}`);
-                }
-                return await response.text();
-            } catch (error) {
-                throw new Error(`Error loading ${filename}: ${error.message}`);
-            }
+        function showStorageStatus() {
+            dataManager.logStorageStatus();
+            showResult('📊 Storage status logged to console');
         }
 
         async function loadEventsOnly() {
             try {
-                showResult('Loading events.tsv...');
-                const eventsContent = await loadFile('events.tsv');
-                loadedData.events = dataManager.loadEventsData(eventsContent);
+                showResult('Loading events from localStorage...');
+                
+                // Debug: Check what's actually in localStorage
+                const rawContent = localStorage.getItem('events');
+                console.log(`🔍 IMMEDIATE CHECK - localStorage 'events':`);
+                console.log(`   Content exists: ${rawContent ? 'YES' : 'NO'}`);
+                console.log(`   Content length: ${rawContent ? rawContent.length : 0} characters`);
+                console.log(`   Lines count: ${rawContent ? rawContent.split('\n').length : 0}`);
+                console.log(`   Raw content type: ${typeof rawContent}`);
+                console.log(`   First 200 chars: "${rawContent ? rawContent.substring(0, 200) : 'null'}"`);
+                console.log(`   Last 50 chars: "${rawContent ? rawContent.substring(rawContent.length - 50) : 'null'}"`);
+                
+                if (!rawContent) {
+                    showResult('❌ No events data in localStorage. Click "Reload All Data" first.', true);
+                    return;
+                }
+                
+                loadedData.events = await dataManager.loadEventsData();
+                
+                const parsed = loadedData.events;
+                console.log(`📊 Events loaded from localStorage:`);
+                console.log(`   Headers: ${parsed.headers ? parsed.headers.join(', ') : 'none'}`);
+                console.log(`   Total events: ${parsed.analytics.totalEvents}`);
+                console.log(`   Execution time: ${parsed.executionTime.toFixed(2)}ms`);
                 
                 showResult(`✅ Events loaded: ${loadedData.events.analytics.totalEvents} events in ${loadedData.events.executionTime.toFixed(2)}ms`);
                 updateAnalytics();
             } catch (error) {
+                console.error('❌ Detailed error:', error);
                 showResult(`❌ Error loading events: ${error.message}`, true);
             }
         }
 
         async function loadUserDataOnly() {
             try {
-                showResult('Loading userData.tsv...');
-                const userContent = await loadFile('userData.tsv');
-                loadedData.userData = dataManager.loadUserData(userContent);
+                showResult('Loading user data from localStorage...');
+                loadedData.userData = await dataManager.loadUserData();
                 
                 showResult(`✅ User data loaded: ${loadedData.userData.analytics.totalEntries} entries in ${loadedData.userData.executionTime.toFixed(2)}ms`);
                 updateAnalytics();
@@ -186,9 +204,8 @@
 
         async function loadTestScoresOnly() {
             try {
-                showResult('Loading testScores.tsv...');
-                const scoresContent = await loadFile('testScores.tsv');
-                loadedData.testScores = dataManager.loadTestScores(scoresContent);
+                showResult('Loading test scores from localStorage...');
+                loadedData.testScores = await dataManager.loadTestScores();
                 
                 showResult(`✅ Test scores loaded: ${loadedData.testScores.analytics.totalTests} tests in ${loadedData.testScores.executionTime.toFixed(2)}ms`);
                 updateAnalytics();
@@ -199,24 +216,15 @@
 
         async function loadAllData() {
             const startTime = performance.now();
-            showResult('🔄 Loading all data files...');
+            showResult('🔄 Loading all data from localStorage...');
             
             try {
-                // Load all files in parallel for better performance
-                const [eventsContent, userContent, scoresContent, settingsContent, improvesContent] = await Promise.all([
-                    loadFile('events.tsv'),
-                    loadFile('userData.tsv'),
-                    loadFile('testScores.tsv'),
-                    loadFile('settings.tsv'),
-                    loadFile('improves.tsv')
-                ]);
-
-                // Process each file
-                loadedData.events = dataManager.loadEventsData(eventsContent);
-                loadedData.userData = dataManager.loadUserData(userContent);
-                loadedData.testScores = dataManager.loadTestScores(scoresContent);
-                loadedData.settings = dataManager.loadSettings(settingsContent);
-                loadedData.improvements = dataManager.loadImprovements(improvesContent);
+                // Load all data using localStorage
+                loadedData.events = await dataManager.loadEventsData();
+                loadedData.userData = await dataManager.loadUserData();
+                loadedData.testScores = await dataManager.loadTestScores();
+                loadedData.settings = await dataManager.loadSettings();
+                loadedData.improvements = await dataManager.loadImprovements();
 
                 // Calculate overall analytics
                 const overallAnalytics = dataManager.calculateOverallAnalytics(loadedData);
@@ -229,6 +237,37 @@
             } catch (error) {
                 showResult(`❌ Error loading data: ${error.message}`, true);
             }
+        }
+
+        async function reloadAllData() {
+            try {
+                showResult('🔄 Reloading all data from files to localStorage...');
+                await dataManager.loadAllToStorage();
+                
+                // Debug: Check what was actually stored
+                const eventsData = localStorage.getItem('events');
+                console.log(`🔍 After reload - Events data check:`);
+                console.log(`   Exists: ${eventsData ? 'YES' : 'NO'}`);
+                if (eventsData) {
+                    console.log(`   Length: ${eventsData.length} chars`);
+                    console.log(`   Lines: ${eventsData.split('\n').length}`);
+                    console.log(`   First 500 chars: "${eventsData.substring(0, 500)}"`);
+                }
+                
+                showResult('✅ All data reloaded to localStorage');
+            } catch (error) {
+                showResult(`❌ Error reloading data: ${error.message}`, true);
+            }
+        }
+
+        function clearStorageData() {
+            dataManager.clearStorage();
+            showResult('🗑️ All data cleared from localStorage');
+        }
+
+        function showStorageStatus() {
+            dataManager.logStorageStatus();
+            showResult('📊 Storage status logged to console');
         }
 
         function updateAnalytics() {
@@ -368,6 +407,29 @@
                 const totalTime = performance.now() - startTime;
                 showResult(`❌ Error counting events: ${error.message} (Time: ${totalTime.toFixed(2)}ms)`, true);
             }
+        }
+
+        async function testDataFolderAccess() {
+            showResult('🔍 Testing data folder access...');
+            
+            const testFiles = ['events.tsv', 'userData.tsv', 'testScores.tsv'];
+            
+            for (const file of testFiles) {
+                try {
+                    const response = await fetch(`data/${file}`);
+                    console.log(`📁 ${file}: ${response.status} ${response.statusText}`);
+                    if (response.ok) {
+                        const content = await response.text();
+                        const lines = content.split('\n');
+                        console.log(`  ✅ ${file}: ${content.length} chars, ${lines.length} lines`);
+                        console.log(`  📄 First line: "${lines[0]}"`);
+                    }
+                } catch (error) {
+                    console.log(`  ❌ ${file}: ${error.message}`);
+                }
+            }
+            
+            showResult('🔍 Data folder test complete - check console for results');
         }
 
         // Initialize

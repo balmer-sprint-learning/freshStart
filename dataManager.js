@@ -1,12 +1,170 @@
-/**
- * Data Manager - TSV file parsing and analytics with performance timing
- * All functions include execution time logging for performance monitoring
- */
+// Simple data manager - we'll rebuild this step by step
+console.log('DataManager: Starting fresh and simple');
 
 class DataManager {
     constructor() {
         this.cache = new Map();
         this.performanceLog = [];
+        this.storageKeys = ['events', 'userData', 'testScores', 'settings', 'improves', 'conjugations'];
+        this.fileExtension = '.tsv';
+        
+        // Check storage status on initialization
+        this.logStorageStatus();
+    }
+
+    /**
+     * Initialize localStorage with TSV data if empty
+     */
+    async initializeStorage() {
+        const startTime = performance.now();
+        
+        try {
+            // Check if any data exists in localStorage
+            const hasData = this.storageKeys.some(key => localStorage.getItem(key) !== null);
+            
+            if (!hasData) {
+                console.log('📦 No data found in localStorage, loading from files...');
+                await this.loadAllToStorage();
+            } else {
+                console.log('📦 Data found in localStorage, ready to use');
+                this.logStorageStatus();
+            }
+            
+            const endTime = performance.now();
+            this.logPerformance('initializeStorage', 'localStorage', endTime - startTime);
+            
+        } catch (error) {
+            const endTime = performance.now();
+            this.logPerformance('initializeStorage', 'localStorage', endTime - startTime, error.message);
+            console.error('❌ Storage initialization failed:', error);
+        }
+    }
+
+    /**
+     * Load all TSV files into localStorage
+     */
+    async loadAllToStorage() {
+        const startTime = performance.now();
+        
+        try {
+            console.log('🔄 Loading all TSV files to localStorage...');
+            
+            for (const key of this.storageKeys) {
+                const filename = `data/${key}${this.fileExtension}`;
+                try {
+                    const response = await fetch(filename);
+                    if (!response.ok) {
+                        console.warn(`⚠️ Could not load ${filename}: ${response.status}`);
+                        continue;
+                    }
+                    
+                    const content = await response.text();
+                    localStorage.setItem(key, content);
+                    console.log(`✅ Stored ${key}: ${content.length} chars, ${content.split('\n').length} lines`);
+                    
+                } catch (error) {
+                    console.warn(`⚠️ Error loading ${filename}: ${error.message}`);
+                }
+            }
+            
+            const endTime = performance.now();
+            this.logPerformance('loadAllToStorage', 'all-files', endTime - startTime);
+            
+            this.logStorageStatus();
+            return true;
+            
+        } catch (error) {
+            const endTime = performance.now();
+            this.logPerformance('loadAllToStorage', 'all-files', endTime - startTime, error.message);
+            throw error;
+        }
+    }
+
+    /**
+     * Get TSV content from localStorage only
+     */
+    getTSVContent(key) {
+        const startTime = performance.now();
+        
+        try {
+            const content = localStorage.getItem(key);
+            
+            if (!content) {
+                throw new Error(`${key} not found in localStorage. Use "Reload All Data" button to load from files.`);
+            }
+            
+            const endTime = performance.now();
+            this.logPerformance('getTSVContent', `localStorage:${key}`, endTime - startTime);
+            return content;
+            
+        } catch (error) {
+            const endTime = performance.now();
+            this.logPerformance('getTSVContent', key, endTime - startTime, error.message);
+            throw error;
+        }
+    }
+
+    /**
+     * Log current localStorage status
+     */
+    logStorageStatus() {
+        console.log('📊 localStorage Status:');
+        this.storageKeys.forEach(key => {
+            const content = localStorage.getItem(key);
+            if (content) {
+                const lines = content.split('\n').length;
+                const size = (content.length / 1024).toFixed(1);
+                console.log(`  ✅ ${key}: ${lines} lines, ${size}KB`);
+            } else {
+                console.log(`  ❌ ${key}: not found`);
+            }
+        });
+    }
+
+    /**
+     * Clear all TSV data from localStorage
+     */
+    clearStorage() {
+        const startTime = performance.now();
+        
+        this.storageKeys.forEach(key => {
+            localStorage.removeItem(key);
+        });
+        
+        const endTime = performance.now();
+        this.logPerformance('clearStorage', 'localStorage', endTime - startTime);
+        
+        console.log('🗑️ Cleared all TSV data from localStorage');
+    }
+
+    /**
+     * Reload specific file to localStorage
+     */
+    async reloadToStorage(key) {
+        const startTime = performance.now();
+        
+        try {
+            const filename = `data/${key}${this.fileExtension}`;
+            const response = await fetch(filename);
+            
+            if (!response.ok) {
+                throw new Error(`Failed to reload ${filename}: ${response.status}`);
+            }
+            
+            const content = await response.text();
+            localStorage.setItem(key, content);
+            
+            const endTime = performance.now();
+            this.logPerformance('reloadToStorage', key, endTime - startTime);
+            
+            console.log(`🔄 Reloaded ${key}: ${content.length} chars, ${content.split('\n').length} lines`);
+            return true;
+            
+        } catch (error) {
+            const endTime = performance.now();
+            this.logPerformance('reloadToStorage', key, endTime - startTime, error.message);
+            throw error;
+        }
     }
 
     /**
@@ -20,6 +178,9 @@ class DataManager {
         
         try {
             const lines = tsvContent.trim().split('\n');
+            console.log(`📋 parseTSV: Processing ${lines.length} lines from ${filename}`);
+            console.log(`📋 First 3 lines: ${lines.slice(0, 3).map((l, i) => `\n  ${i+1}: "${l}"`).join('')}`);
+            
             let headerRowIndex = null;
             
             // Look for headerRow comment to find exact header location
@@ -29,13 +190,28 @@ class DataManager {
                     const match = line.match(/headerRow\s*=\s*(\d+)/);
                     if (match) {
                         headerRowIndex = parseInt(match[1]) - 1; // Convert to 0-based index
+                        console.log(`📍 Found headerRow comment: row ${match[1]} (0-based: ${headerRowIndex})`);
                         break;
                     }
                 }
             }
             
-            // If no headerRow comment found, fall back to old method
+            // If no headerRow comment found, look for line starting with "ID"
             if (headerRowIndex === null) {
+                console.log('📍 No headerRow comment found, looking for line starting with "ID"');
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line.startsWith('#') && line.startsWith('ID\t')) {
+                        headerRowIndex = i;
+                        console.log(`📍 Found header row starting with "ID" at line ${i + 1}`);
+                        break;
+                    }
+                }
+            }
+            
+            // Final fallback to old method
+            if (headerRowIndex === null) {
+                console.log('📍 Using fallback method: first non-comment line');
                 headerRowIndex = 0;
                 // Skip comment lines (starting with # or empty lines)
                 while (headerRowIndex < lines.length && 
@@ -46,8 +222,10 @@ class DataManager {
             }
             
             if (headerRowIndex >= lines.length) {
-                throw new Error('No header row found in TSV file');
+                throw new Error(`No header row found in TSV file. Checked ${lines.length} lines.`);
             }
+            
+            console.log(`📍 Using header row at index ${headerRowIndex} (line ${headerRowIndex + 1}): "${lines[headerRowIndex].substring(0, 50)}..."`);
             
             // Get headers from specified row
             const headers = lines[headerRowIndex].split('\t').map(h => h.trim());
@@ -90,13 +268,18 @@ class DataManager {
 
     /**
      * Load and parse events.tsv data with performance timing
-     * @param {string} tsvContent - Raw TSV content from events.tsv
+     * @param {string} tsvContent - Optional: Raw TSV content. If not provided, loads from storage/file
      * @returns {Object} Structured events data with analytics
      */
-    loadEventsData(tsvContent) {
+    async loadEventsData(tsvContent = null) {
         const startTime = performance.now();
         
         try {
+            // Get content from parameter, localStorage, or file
+            if (!tsvContent) {
+                tsvContent = await this.getTSVContent('events');
+            }
+            
             const parsed = this.parseTSV(tsvContent, 'events.tsv');
             const events = parsed.rows;
             
@@ -153,13 +336,18 @@ class DataManager {
 
     /**
      * Load and parse userData.tsv with performance timing
-     * @param {string} tsvContent - Raw TSV content from userData.tsv
+     * @param {string} tsvContent - Optional: Raw TSV content. If not provided, loads from storage/file
      * @returns {Object} Structured user data with level analytics
      */
-    loadUserData(tsvContent) {
+    async loadUserData(tsvContent = null) {
         const startTime = performance.now();
         
         try {
+            // Get content from parameter, localStorage, or file
+            if (!tsvContent) {
+                tsvContent = await this.getTSVContent('userData');
+            }
+            
             const parsed = this.parseTSV(tsvContent, 'userData.tsv');
             const userData = parsed.rows;
             
@@ -215,13 +403,18 @@ class DataManager {
 
     /**
      * Load and parse testScores.tsv with performance timing
-     * @param {string} tsvContent - Raw TSV content from testScores.tsv
+     * @param {string} tsvContent - Optional: Raw TSV content. If not provided, loads from storage/file
      * @returns {Object} Structured test scores with skill analytics
      */
-    loadTestScores(tsvContent) {
+    async loadTestScores(tsvContent = null) {
         const startTime = performance.now();
         
         try {
+            // Get content from parameter, localStorage, or file
+            if (!tsvContent) {
+                tsvContent = await this.getTSVContent('testScores');
+            }
+            
             const parsed = this.parseTSV(tsvContent, 'testScores.tsv');
             const scores = parsed.rows;
             
@@ -299,13 +492,18 @@ class DataManager {
 
     /**
      * Load and parse settings.tsv with performance timing
-     * @param {string} tsvContent - Raw TSV content from settings.tsv
+     * @param {string} tsvContent - Optional: Raw TSV content. If not provided, loads from storage/file
      * @returns {Object} Structured settings data
      */
-    loadSettings(tsvContent) {
+    async loadSettings(tsvContent = null) {
         const startTime = performance.now();
         
         try {
+            // Get content from parameter, localStorage, or file
+            if (!tsvContent) {
+                tsvContent = await this.getTSVContent('settings');
+            }
+            
             const lines = tsvContent.trim().split('\n');
             const settings = {};
             
@@ -336,13 +534,18 @@ class DataManager {
 
     /**
      * Load and parse improves.tsv with performance timing
-     * @param {string} tsvContent - Raw TSV content from improves.tsv
+     * @param {string} tsvContent - Optional: Raw TSV content. If not provided, loads from storage/file
      * @returns {Object} Structured improvements data
      */
-    loadImprovements(tsvContent) {
+    async loadImprovements(tsvContent = null) {
         const startTime = performance.now();
         
         try {
+            // Get content from parameter, localStorage, or file
+            if (!tsvContent) {
+                tsvContent = await this.getTSVContent('improves');
+            }
+            
             const parsed = this.parseTSV(tsvContent, 'improves.tsv');
             const improvements = parsed.rows;
             
