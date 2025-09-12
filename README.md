@@ -149,8 +149,23 @@ A responsive single-page web application with three main screens: Profile, Start
 | `setActionFormData(data)` | Populate form with data | Action | Accepts object with form fields |
 | `clearActionForm()` | Reset all form fields | Action | Clears question/clue/answer/info |
 
+### Data Manager Functions (dataManager.js)
+| Function Name | Purpose | Screen | Notes |
+|---------------|---------|---------|-------|
+| `parseTSV(tsvContent, filename)` | Parse TSV files with comments/headers | All | Core TSV parser with timing |
+| `loadEventsData(tsvContent)` | Load and analyze events.tsv | All | Returns events + analytics |
+| `loadUserData(tsvContent)` | Load and analyze userData.tsv | All | Returns user data + level analytics |
+| `loadTestScores(tsvContent)` | Load and analyze testScores.tsv | All | Returns scores + skill analytics |
+| `loadSettings(tsvContent)` | Load settings.tsv key:value pairs | All | Returns settings object |
+| `loadImprovements(tsvContent)` | Load and analyze improves.tsv | All | Returns improvements + analytics |
+| `calculateOverallAnalytics(allData)` | Cross-data analytics calculation | All | Comprehensive insights across all data |
+| `logPerformance(func, source, time, error)` | Log function execution timing | All | Performance monitoring |
+| `getPerformanceSummary()` | Get timing statistics summary | All | Returns performance metrics |
+| `clearPerformanceLog()` | Clear performance log | All | Reset timing data |
+
 ### Variables & Objects
 | Name | Type | Purpose | Screen | Notes |
 |------|------|---------|---------|-------|
 | `themes` | Object | Screen background colors | All | Maps F1/F2/F3 to CSS values |
 | `retentionChart` | Chart.js | Chart instance reference | Start | Global for updates/manipulation |
+| `dataManager` | DataManager | Global data handling instance | All | TSV parsing and analytics with timing |

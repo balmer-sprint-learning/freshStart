@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Manager Performance Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .performance-log {
+            background: #1e1e1e;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0066cc;
+        }
+        .stat-label {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            color: #155724;
+            background: #d4edda;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>📊 Data Manager Performance Test</h1>
+    <p>This page demonstrates the performance-monitored data loading functions for TSV files.</p>
+
+    <div class="container">
+        <h2>🚀 Load Data Files</h2>
+        <button onclick="loadAllData()">Load All Data Files</button>
+        <button onclick="loadEventsOnly()">Load Events Only</button>
+        <button onclick="loadUserDataOnly()">Load User Data Only</button>
+        <button onclick="loadTestScoresOnly()">Load Test Scores Only</button>
+        <button onclick="clearLogs()">Clear Performance Log</button>
+        <button onclick="quickEventCount()" style="background: #28a745;">🔢 Quick Event Count</button>
+        
+        <div id="loadResults"></div>
+    </div>
+
+    <div class="container">
+        <h2>📈 Performance Log</h2>
+        <div id="performanceLog" class="performance-log">
+            Performance logs will appear here...
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📊 Data Analytics</h2>
+        <div id="analyticsResults" class="stats-grid">
+            Load data to see analytics...
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>⏱️ Performance Summary</h2>
+        <div id="performanceSummary">
+            <button onclick="showPerformanceSummary()">Generate Performance Summary</button>
+        </div>
+    </div>
+
+    <script src="dataManager.js"></script>
+    <script>
+        // Global data storage
+        let loadedData = {};
+
+        // Override console.log to also display in performance log
+        const originalConsoleLog = console.log;
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+            updatePerformanceLog();
+        };
+
+        function updatePerformanceLog() {
+            const logElement = document.getElementById('performanceLog');
+            const logs = dataManager.performanceLog.slice(-20); // Show last 20 entries
+            
+            logElement.innerHTML = logs.map(log => {
+                const status = log.status === 'success' ? '✅' : '❌';
+                const time = log.executionTime.toFixed(2);
+                return `${status} ${log.timestamp.split('T')[1].split('.')[0]} | ${log.function}(${log.dataSource}) | ${time}ms${log.error ? ` | ${log.error}` : ''}`;
+            }).join('\n');
+            
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function showResult(message, isError = false) {
+            const resultsDiv = document.getElementById('loadResults');
+            const className = isError ? 'error' : 'success';
+            resultsDiv.innerHTML = `<div class="${className}">${message}</div>`;
+        }
+
+        async function loadFile(filename) {
+            try {
+                const response = await fetch(`data/${filename}`);
+                if (!response.ok) {
+                    throw new Error(`Failed to load ${filename}: ${response.status}`);
+                }
+                return await response.text();
+            } catch (error) {
+                throw new Error(`Error loading ${filename}: ${error.message}`);
+            }
+        }
+
+        async function loadEventsOnly() {
+            try {
+                showResult('Loading events.tsv...');
+                const eventsContent = await loadFile('events.tsv');
+                loadedData.events = dataManager.loadEventsData(eventsContent);
+                
+                showResult(`✅ Events loaded: ${loadedData.events.analytics.totalEvents} events in ${loadedData.events.executionTime.toFixed(2)}ms`);
+                updateAnalytics();
+            } catch (error) {
+                showResult(`❌ Error loading events: ${error.message}`, true);
+            }
+        }
+
+        async function loadUserDataOnly() {
+            try {
+                showResult('Loading userData.tsv...');
+                const userContent = await loadFile('userData.tsv');
+                loadedData.userData = dataManager.loadUserData(userContent);
+                
+                showResult(`✅ User data loaded: ${loadedData.userData.analytics.totalEntries} entries in ${loadedData.userData.executionTime.toFixed(2)}ms`);
+                updateAnalytics();
+            } catch (error) {
+                showResult(`❌ Error loading user data: ${error.message}`, true);
+            }
+        }
+
+        async function loadTestScoresOnly() {
+            try {
+                showResult('Loading testScores.tsv...');
+                const scoresContent = await loadFile('testScores.tsv');
+                loadedData.testScores = dataManager.loadTestScores(scoresContent);
+                
+                showResult(`✅ Test scores loaded: ${loadedData.testScores.analytics.totalTests} tests in ${loadedData.testScores.executionTime.toFixed(2)}ms`);
+                updateAnalytics();
+            } catch (error) {
+                showResult(`❌ Error loading test scores: ${error.message}`, true);
+            }
+        }
+
+        async function loadAllData() {
+            const startTime = performance.now();
+            showResult('🔄 Loading all data files...');
+            
+            try {
+                // Load all files in parallel for better performance
+                const [eventsContent, userContent, scoresContent, settingsContent, improvesContent] = await Promise.all([
+                    loadFile('events.tsv'),
+                    loadFile('userData.tsv'),
+                    loadFile('testScores.tsv'),
+                    loadFile('settings.tsv'),
+                    loadFile('improves.tsv')
+                ]);
+
+                // Process each file
+                loadedData.events = dataManager.loadEventsData(eventsContent);
+                loadedData.userData = dataManager.loadUserData(userContent);
+                loadedData.testScores = dataManager.loadTestScores(scoresContent);
+                loadedData.settings = dataManager.loadSettings(settingsContent);
+                loadedData.improvements = dataManager.loadImprovements(improvesContent);
+
+                // Calculate overall analytics
+                const overallAnalytics = dataManager.calculateOverallAnalytics(loadedData);
+                loadedData.overall = overallAnalytics;
+
+                const totalTime = performance.now() - startTime;
+                showResult(`✅ All data loaded successfully in ${totalTime.toFixed(2)}ms total`);
+                updateAnalytics();
+                
+            } catch (error) {
+                showResult(`❌ Error loading data: ${error.message}`, true);
+            }
+        }
+
+        function updateAnalytics() {
+            const analyticsDiv = document.getElementById('analyticsResults');
+            let html = '';
+
+            if (loadedData.events) {
+                const analytics = loadedData.events.analytics;
+                html += `
+                    <div class="stat-card">
+                        <div class="stat-value">${analytics.totalEvents}</div>
+                        <div class="stat-label">Total Events</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${analytics.averageDuration.toFixed(1)}s</div>
+                        <div class="stat-label">Avg Duration</div>
+                    </div>
+                `;
+            }
+
+            if (loadedData.userData) {
+                const analytics = loadedData.userData.analytics;
+                html += `
+                    <div class="stat-card">
+                        <div class="stat-value">${analytics.totalEntries}</div>
+                        <div class="stat-label">User Entries</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${analytics.averageLevel.toFixed(1)}</div>
+                        <div class="stat-label">Avg Level</div>
+                    </div>
+                `;
+            }
+
+            if (loadedData.testScores) {
+                const analytics = loadedData.testScores.analytics;
+                const avgReading = analytics.skillAverages.READING.toFixed(2);
+                html += `
+                    <div class="stat-card">
+                        <div class="stat-value">${analytics.totalTests}</div>
+                        <div class="stat-label">Test Scores</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${avgReading}</div>
+                        <div class="stat-label">Avg Reading</div>
+                    </div>
+                `;
+            }
+
+            if (loadedData.overall) {
+                const performance = loadedData.overall.analytics.performance;
+                html += `
+                    <div class="stat-card">
+                        <div class="stat-value">${performance.totalDataLoadTime.toFixed(1)}ms</div>
+                        <div class="stat-label">Total Load Time</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${performance.averageLoadTime.toFixed(1)}ms</div>
+                        <div class="stat-label">Avg Load Time</div>
+                    </div>
+                `;
+            }
+
+            if (html) {
+                analyticsDiv.innerHTML = html;
+            }
+        }
+
+        function showPerformanceSummary() {
+            const summary = dataManager.getPerformanceSummary();
+            const summaryDiv = document.getElementById('performanceSummary');
+            
+            let html = `
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">${summary.totalCalls}</div>
+                        <div class="stat-label">Total Function Calls</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${summary.successfulCalls}</div>
+                        <div class="stat-label">Successful Calls</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${summary.failedCalls}</div>
+                        <div class="stat-label">Failed Calls</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${summary.averageExecutionTime.toFixed(2)}ms</div>
+                        <div class="stat-label">Avg Execution Time</div>
+                    </div>
+                </div>
+                <h3>Function Performance</h3>
+                <div class="performance-log">
+            `;
+            
+            Object.entries(summary.functionStats).forEach(([func, stats]) => {
+                html += `${func}: ${stats.calls} calls, avg ${stats.averageTime.toFixed(2)}ms (min: ${stats.minTime.toFixed(2)}ms, max: ${stats.maxTime.toFixed(2)}ms)\n`;
+            });
+            
+            html += '</div>';
+            summaryDiv.innerHTML = html;
+        }
+
+        function clearLogs() {
+            dataManager.clearPerformanceLog();
+            updatePerformanceLog();
+            showResult('Performance log cleared');
+        }
+
+        async function quickEventCount() {
+            const startTime = performance.now();
+            showResult('🔄 Counting events in events.tsv...');
+            
+            try {
+                // Load events.tsv file
+                const eventsContent = await loadFile('events.tsv');
+                
+                // Parse and count
+                const eventsData = dataManager.loadEventsData(eventsContent);
+                const eventCount = eventsData.analytics.totalEvents;
+                
+                const totalTime = performance.now() - startTime;
+                
+                showResult(`✅ Found ${eventCount} event rows in events.tsv (Total time: ${totalTime.toFixed(2)}ms)`);
+                
+                // Show breakdown of timing
+                const parseTime = eventsData.executionTime;
+                const fileLoadTime = totalTime - parseTime;
+                
+                console.log(`📊 Performance Breakdown:`);
+                console.log(`   File loading: ${fileLoadTime.toFixed(2)}ms`);
+                console.log(`   Data parsing: ${parseTime.toFixed(2)}ms`);
+                console.log(`   Total time: ${totalTime.toFixed(2)}ms`);
+                console.log(`   Event count: ${eventCount} rows`);
+                
+            } catch (error) {
+                const totalTime = performance.now() - startTime;
+                showResult(`❌ Error counting events: ${error.message} (Time: ${totalTime.toFixed(2)}ms)`, true);
+            }
+        }
+
+        // Initialize
+        updatePerformanceLog();
+    </script>
+</body>
+</html>
