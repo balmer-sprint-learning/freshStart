@@ -2,6 +2,7 @@
 
 // Global variables for current session
 let currentItems = [];
+let sessionCompleted = 0; // Track how many items completed this session
 
 // Build currentItems array based on mode
 async function buildCurrentItems(modeParam = null, debug = false) {
@@ -294,27 +295,194 @@ function handleActionButtons() {
   
   if (btn1) {
     btn1.addEventListener('click', function() {
-      console.log('Button 1 clicked');
-      // Placeholder for B1 functionality
+      console.log('Button 1 (Improve/OK) clicked');
+      // Remove from currentItems but keep in storage
+      removeCurrentItem(false);
     });
   }
   
   if (btn2) {
     btn2.addEventListener('click', function() {
-      console.log('Button 2 clicked');
-      // Placeholder for B2 functionality
+      console.log('Button 2 (OK/Familiar) clicked');
+      // Remove from currentItems but keep in storage
+      removeCurrentItem(false);
     });
   }
   
   if (btn3) {
     btn3.addEventListener('click', function() {
-      console.log('Button 3 clicked');
-      // Placeholder for B3 functionality
+      console.log('Button 3 (Good/Known) clicked');
+      // Remove from currentItems AND delete from storage
+      removeCurrentItem(true);
     });
   }
 }
 
-// Update button labels dynamically
+// Remove current item from currentItems and optionally from storage
+function removeCurrentItem(deleteFromStorage = false) {
+  if (currentItems.length === 0) {
+    console.log('No items remaining in currentItems');
+    return;
+  }
+  
+  // Get the first item (current item being processed)
+  const currentItemId = currentItems[0];
+  
+  // Remove from currentItems array
+  currentItems.shift(); // Remove first item
+  
+  // Increment session progress
+  sessionCompleted++;
+  updateH2WithProgress();
+  
+  console.log(`Removed item ${currentItemId} from currentItems. Remaining: ${currentItems.length}`);
+  
+  if (deleteFromStorage && typeof mode !== 'undefined' && mode === 'improve') {
+    // Remove from improves storage
+    removeFromImprovesStorage(currentItemId);
+  }
+  
+  // Load the next item
+  loadCurrentItem();
+}
+
+// Remove item from improves storage by ID
+function removeFromImprovesStorage(itemId) {
+  try {
+    const content = localStorage.getItem('improves');
+    if (!content) {
+      console.error('Improves data not found in localStorage');
+      return;
+    }
+    
+    const lines = content.split(/\r\n|\r|\n/);
+    const updatedLines = [];
+    let removed = false;
+    
+    // Find header row
+    let headerRowIndex = null;
+    for (let i = 0; i < Math.min(10, lines.length); i++) {
+      const line = lines[i].trim();
+      if (line.includes('# headerRow =')) {
+        const match = line.match(/headerRow\s*=\s*(\d+)/);
+        if (match) {
+          headerRowIndex = parseInt(match[1]) - 1;
+          break;
+        }
+      }
+    }
+    
+    // Filter out the target item
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      
+      // Keep comments and header row
+      if (line.startsWith('#') || i === headerRowIndex) {
+        updatedLines.push(lines[i]);
+      } else if (line === itemId) {
+        // This is the item to remove
+        removed = true;
+        console.log(`Removed item ${itemId} from improves storage`);
+      } else if (line) {
+        // Keep other data lines
+        updatedLines.push(lines[i]);
+      } else {
+        // Keep empty lines
+        updatedLines.push(lines[i]);
+      }
+    }
+    
+    if (removed) {
+      // Update localStorage with modified content
+      const updatedContent = updatedLines.join('\n');
+      localStorage.setItem('improves', updatedContent);
+      console.log(`Updated improves storage. Item ${itemId} permanently removed.`);
+    } else {
+      console.log(`Item ${itemId} not found in improves storage`);
+    }
+    
+  } catch (error) {
+    console.error('Error removing item from improves storage:', error);
+  }
+}
+
+// Increment session progress and update H2
+function incrementSessionProgress() {
+  // This function is no longer needed as removeCurrentItem handles the progress
+  updateH2WithProgress();
+}
+
+// Load and display the current item from curriculum
+async function loadCurrentItem() {
+  if (currentItems.length === 0) {
+    console.log('No items in currentItems to load');
+    clearActionFields();
+    return;
+  }
+  
+  const currentItemId = currentItems[0];
+  console.log(`Loading curriculum item for ID: ${currentItemId}`);
+  
+  try {
+    // Use the proper dataManager to get curriculum objects
+    const curriculum = await dataManager.loadCurriculum();
+    if (!curriculum) {
+      throw new Error('Curriculum data not found');
+    }
+    
+    console.log(`Curriculum loaded: ${curriculum.length} items`);
+    
+    // Find the matching curriculum item by ID (ids property)
+    const foundItem = curriculum.find(item => item.ids === currentItemId);
+    
+    if (foundItem) {
+      console.log(`Found curriculum item:`, foundItem);
+      // Display the item in the form fields using proper object properties
+      displayCurrentItem(foundItem);
+    } else {
+      console.log(`No curriculum item found for ID: ${currentItemId}`);
+      clearActionFields();
+    }
+    
+  } catch (error) {
+    console.error('Error loading current item from curriculum:', error);
+    clearActionFields();
+  }
+}
+
+// Display item data in the form fields
+function displayCurrentItem(item) {
+  const questionField = document.getElementById('action-question');
+  const clueField = document.getElementById('action-clue');
+  const answerField = document.getElementById('action-answer');
+  
+  if (questionField) questionField.value = item.question || '';
+  if (clueField) clueField.value = item.clue || '';
+  if (answerField) answerField.value = item.answer || '';
+  
+  console.log(`Displayed item ${item.ids}: Q="${item.question}" C="${item.clue}" A="${item.answer}"`);
+}
+
+// Clear all action form fields
+function clearActionFields() {
+  const questionField = document.getElementById('action-question');
+  const clueField = document.getElementById('action-clue');
+  const answerField = document.getElementById('action-answer');
+  
+  if (questionField) questionField.value = '';
+  if (clueField) clueField.value = '';
+  if (answerField) answerField.value = '';
+}
+function updateH2WithProgress() {
+  const h2Field = document.querySelector('.header-field:nth-child(2)');
+  
+  if (h2Field && typeof mode !== 'undefined' && mode === 'improve') {
+    const remaining = currentItems.length - sessionCompleted;
+    h2Field.textContent = `${sessionCompleted}/${currentItems.length}`;
+  } else if (h2Field) {
+    h2Field.textContent = 'h2'; // fallback to default
+  }
+}
 function updateButtonLabels(label1, label2, label3) {
   const btn1 = document.getElementById('btn1');
   const btn2 = document.getElementById('btn2');
@@ -379,9 +547,31 @@ function observeActionScreen() {
   observer.observe(actionScreen, { attributes: true, attributeFilter: ['class'] });
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+  // Remove preload class to enable transitions after page is loaded
+  setTimeout(() => {
+    document.body.classList.remove('preload');
+  }, 100);
+  
   handleActionForm();
   handleActionButtons();
   setActionButtonLabelsByMode();
   observeActionScreen();
+  
+  // Auto-load currentItems based on mode when page loads
+  if (typeof mode !== 'undefined' && mode) {
+    try {
+      console.log(`Loading items for mode: ${mode}`);
+      await buildCurrentItems(mode);
+      console.log(`Loaded ${currentItems.length} items for mode ${mode}`);
+      
+      // Update H2 with progress after loading items
+      updateH2WithProgress();
+      
+      // Load and display the first item
+      await loadCurrentItem();
+    } catch (error) {
+      console.error(`Error loading items for mode ${mode}:`, error);
+    }
+  }
 });

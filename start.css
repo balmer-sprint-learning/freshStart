@@ -111,6 +111,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.footer-field:hover {
+  background: rgba(0,119,123,0.2);
 }
 
 .header-fields {
@@ -126,13 +132,15 @@ body {
 /* Chart specific styling */
 .chart-container {
   position: relative;
-  width: calc(var(--vh) * 35);
-  height: calc(var(--vh) * 35);
+  /* Chart size is 50% of smaller viewport dimension */
+  width: min(50vw, 50vh);
+  height: min(50vw, 50vh);
+  /* Card is 10% larger than chart */
+  padding: min(2.5vw, 2.5vh);
   margin: calc(var(--vh) * 5) auto;
   border-radius: calc(var(--vh) * 2);
   background: white;
   box-shadow: 0 calc(var(--vh) * 1) calc(var(--vh) * 3) rgba(0,0,0,0.1);
-  padding: calc(var(--vh) * 2);
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -149,7 +157,8 @@ body {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: calc(var(--vh) * 18);
+  /* Text size reduced to about half */
+  font-size: calc(var(--vh) * 9);
   font-weight: 700;
   color: rgb(0,119,123);
   text-align: center;

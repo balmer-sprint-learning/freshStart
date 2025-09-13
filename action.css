@@ -6,6 +6,11 @@
   --vh: calc(100vh / 100);
 }
 
+/* Prevent transitions during page load to avoid shaking */
+.preload * {
+  transition: none !important;
+}
+
 /* Global reset and base styling */
 * {
   margin: 0;
@@ -89,6 +94,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.footer-field:hover {
+  background: rgba(0,119,123,0.2);
 }
 
 .header-fields {
@@ -99,4 +110,112 @@ body {
   justify-content: space-between;
   align-items: center;
   height: 100%;
+}
+
+/* Action page specific styling */
+.skeleton-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 0;
+}
+
+.action-fields-container {
+  width: 90vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: calc(10 * var(--vh));
+  margin-bottom: calc(3 * var(--vh));
+}
+
+#action-question {
+  width: 100%;
+  background: rgba(0,119,123,0.25);
+  border: none;
+  outline: none;
+  text-align: center;
+  font-size: calc(var(--vw) * 2.5);
+  font-family: inherit;
+  color: rgb(25,25,25);
+  padding: calc(var(--vh) * 1);
+  height: calc(9 * var(--vh));
+  resize: none;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+#action-clue {
+  width: 100%;
+  background: rgba(0,119,123,0.25);
+  border: none;
+  outline: none;
+  text-align: center;
+  font-size: calc(var(--vw) * 2.5);
+  font-family: inherit;
+  color: rgb(25,25,25);
+  padding: calc(var(--vh) * 1);
+  height: calc(3 * var(--vh));
+  margin-bottom: 0;
+}
+
+#action-answer {
+  width: 100%;
+  background: rgba(0,119,123,0.25);
+  border: none;
+  outline: none;
+  text-align: center;
+  font-size: calc(var(--vw) * 2.5);
+  font-family: inherit;
+  color: rgb(25,25,25);
+  padding: calc(var(--vh) * 1);
+  height: calc(9 * var(--vh));
+  resize: none;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+.action-buttons {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: calc(var(--vw) * 3);
+  margin-bottom: calc(var(--vh) * 3);
+}
+
+.action-btn {
+  background: rgb(0,119,123);
+  color: white;
+  border: none;
+  border-radius: calc(var(--vh) * 1);
+  padding: calc(var(--vh) * 2) calc(var(--vw) * 4);
+  font-size: calc(var(--vw) * 2);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.action-btn:hover {
+  background: rgba(0,119,123,0.8);
+}
+
+.action-info-section {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+#info {
+  width: 90vw;
+  background: none;
+  border: none;
+  outline: none;
+  text-align: center;
+  font-size: calc(var(--vw) * 2);
+  font-family: inherit;
+  color: rgb(25,25,25);
+  padding: calc(var(--vh) * 1);
+  resize: none;
+  min-height: calc(var(--vh) * 15);
 }

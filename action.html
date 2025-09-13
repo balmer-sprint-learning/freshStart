@@ -12,7 +12,7 @@
   <script src="general.js"></script>
   <script src="action.js"></script>
 </head>
-<body>
+<body class="preload">
   <div class="app-skeleton">
     <div class="responsive-box">
       <div class="skeleton-header">
@@ -23,12 +23,12 @@
         </div>
       </div>
       <div class="skeleton-content">
-        <div class="action-fields-group">
-          <div class="action-fields-simple">
-            <input type="text" id="action-question" readonly placeholder="Question">
-            <input type="text" id="action-clue" readonly placeholder="Clue">
-            <input type="text" id="action-answer" readonly placeholder="Answer">
-          </div>
+        <div class="action-fields-container">
+          <textarea id="action-question" readonly placeholder="Question">question
+question
+question</textarea>
+          <input type="text" id="action-clue" readonly placeholder="Clue">
+          <textarea id="action-answer" readonly placeholder="Answer"></textarea>
         </div>
         <div class="action-buttons">
           <button type="button" class="action-btn" id="btn1">B1</button>
@@ -41,9 +41,9 @@
       </div>
       <div class="skeleton-footer">
         <div class="footer-fields">
-          <a href="action.html" class="footer-field">Vocab</a>
-          <a href="action.html" class="footer-field">Fluency</a>
-          <a href="profile.html" class="footer-field">Other</a>
+          <div class="footer-field">Vocab</div>
+          <div class="footer-field">Fluency</div>
+          <div class="footer-field">Other</div>
         </div>
       </div>
     </div>
