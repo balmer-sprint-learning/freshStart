@@ -1,0 +1,5 @@
+# headerRow = 5
+# Action: improve | review | Learn | conjugate | listen | compose | errors
+#  Result: new | familiar | known | 0 | 0.5 | 1
+#  sDay: sprintDay ; A/P: active | passive ; warning: starting row = 5 is fixed
+ID	ACTION	RESULT	DURATION	SDAY	A/P

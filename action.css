@@ -219,3 +219,26 @@ body {
   resize: none;
   min-height: calc(var(--vh) * 15);
 }
+
+.action-events-section {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: calc(var(--vh) * 2);
+}
+
+.action-events-field {
+  width: 90vw;
+  background: #f8f9fa;
+  border: 1px solid #e5e7eb;
+  border-radius: calc(var(--vh) * 1);
+  text-align: left;
+  font-size: calc(var(--vw) * 1.5);
+  font-family: 'Courier New', monospace;
+  color: #6b7280;
+  padding: calc(var(--vh) * 1);
+  resize: none;
+  min-height: calc(var(--vh) * 12);
+  max-height: calc(var(--vh) * 20);
+  overflow-y: auto;
+}

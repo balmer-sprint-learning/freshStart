@@ -198,6 +198,96 @@ class DataManager {
     }
     async loadImprovements() { throw new Error('loadImprovements not implemented yet'); }
     calculateOverallAnalytics() { throw new Error('calculateOverallAnalytics not implemented yet'); }
+    
+    async maxIDForLearnsToday() {
+        try {
+            const settings = await this.loadSettings();
+            if (!settings || !settings.licence) {
+                console.log('No settings or licence found');
+                return { maxIDForLearns: 0 };
+            }
+            
+            // Parse licence to get tier (e.g., BB-015-34-R4-U-025 -> R4)
+            const licenceParts = settings.licence.split('-');
+            if (licenceParts.length < 4) {
+                console.log('Invalid licence format');
+                return { maxIDForLearns: 0 };
+            }
+            
+            const tier = licenceParts[3];
+            const tierMap = {
+                'T1': 750,
+                'N2': 1500,
+                'M3': 2250,
+                'R4': 3000
+            };
+            
+            const maxIDForTier = tierMap[tier];
+            if (!maxIDForTier) {
+                console.log('Unknown tier:', tier);
+                return { maxIDForLearns: 0 };
+            }
+            
+            // Get current sprint day
+            const currentSprintDay = this.getCurrentSprintDay(settings);
+            
+            // Calculate how many items should be available based on progress
+            // For now, allow learning up to the tier limit
+            // This could be refined to limit daily learning based on curriculum pacing
+            
+            return { 
+                maxIDForLearns: maxIDForTier,
+                currentSprintDay: currentSprintDay,
+                tier: tier
+            };
+            
+        } catch (error) {
+            console.error('Error in maxIDForLearnsToday:', error);
+            return { maxIDForLearns: 0 };
+        }
+    }
+    
+    getCurrentSprintDay(settings = null) {
+        try {
+            if (!settings) {
+                const settingsContent = localStorage.getItem('settings');
+                if (!settingsContent) return 1;
+                
+                const lines = settingsContent.split(/\r\n|\r|\n/);
+                const headerRowIndex = this.findHeaderRowIndex(lines);
+                settings = {};
+                
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (line && !line.startsWith('#') && i !== headerRowIndex) {
+                        const columns = line.split('\t');
+                        if (columns.length >= 2) {
+                            settings[columns[0].trim()] = columns[1].trim();
+                        }
+                    }
+                }
+            }
+            
+            const startDate = settings.cStartDate || settings.startDate;
+            if (!startDate) return 1;
+            
+            const start = new Date(startDate);
+            const today = new Date();
+            const diffTime = today.getTime() - start.getTime();
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            
+            return Math.max(1, diffDays + 1); // Sprint day starts at 1
+            
+        } catch (error) {
+            console.error('Error calculating current sprint day:', error);
+            return 1;
+        }
+    }
 }
 
 const dataManager = new DataManager();
+
+// Expose maxIDForLearnsToday function globally for action.js
+window.maxIDForLearnsToday = async function() {
+    return await dataManager.maxIDForLearnsToday();
+};

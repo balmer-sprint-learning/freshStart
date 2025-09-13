@@ -3,6 +3,7 @@
 // Global variables for current session
 let currentItems = [];
 let sessionCompleted = 0; // Track how many items completed this session
+let itemDisplayStart = null; // Track when current item was first displayed
 
 // Build currentItems array based on mode
 async function buildCurrentItems(modeParam = null, debug = false) {
@@ -295,26 +296,71 @@ function handleActionButtons() {
   
   if (btn1) {
     btn1.addEventListener('click', function() {
-      console.log('Button 1 (Improve/OK) clicked');
-      // Remove from currentItems but keep in storage
-      removeCurrentItem(false);
+      console.log('Button 1 clicked');
+      // Create event with appropriate result value
+      const resultValue = (mode === 'learn') ? 'known' : 0;
+      createEvent(resultValue).then(() => {
+        removeCurrentItem(false);
+      }).catch(error => {
+        console.error('Error in button 1 handler:', error);
+        removeCurrentItem(false); // Still remove item even if event creation fails
+      });
     });
   }
   
   if (btn2) {
     btn2.addEventListener('click', function() {
-      console.log('Button 2 (OK/Familiar) clicked');
-      // Remove from currentItems but keep in storage
-      removeCurrentItem(false);
+      console.log('Button 2 clicked');
+      // Create event with appropriate result value
+      const resultValue = (mode === 'learn') ? 'familiar' : 0.5;
+      createEvent(resultValue).then(() => {
+        removeCurrentItem(false);
+      }).catch(error => {
+        console.error('Error in button 2 handler:', error);
+        removeCurrentItem(false); // Still remove item even if event creation fails
+      });
     });
   }
   
   if (btn3) {
     btn3.addEventListener('click', function() {
-      console.log('Button 3 (Good/Known) clicked');
-      // Remove from currentItems AND delete from storage
-      removeCurrentItem(true);
+      console.log('Button 3 clicked');
+      // Create event with appropriate result value
+      const resultValue = (mode === 'learn') ? 'new' : 1;
+      createEvent(resultValue).then(() => {
+        removeCurrentItem(true);
+      }).catch(error => {
+        console.error('Error in button 3 handler:', error);
+        removeCurrentItem(true); // Still remove item even if event creation fails
+      });
     });
+  }
+}
+
+// Create event when button is pressed
+async function createEvent(result) {
+  console.log(`🎯 Button clicked with result: ${result}`);
+  
+  if (currentItems.length === 0 || itemDisplayStart === null) {
+    console.log('❌ Cannot create event: no current item or display start time');
+    console.log(`  - currentItems.length: ${currentItems.length}`);
+    console.log(`  - itemDisplayStart: ${itemDisplayStart}`);
+    return;
+  }
+  
+  const itemId = currentItems[0];
+  const action = mode || 'unknown';
+  const duration = Math.round((Date.now() - itemDisplayStart) / 1000); // Duration in seconds
+  
+  console.log(`📊 Event details: itemId=${itemId}, action=${action}, duration=${duration}s`);
+  
+  const sprintDay = await calculateSprintDay();
+  
+  if (sprintDay !== null) {
+    console.log(`📅 Sprint day calculated: ${sprintDay}`);
+    await addEventToStorage(itemId, action, result, duration, sprintDay);
+  } else {
+    console.error('❌ Could not calculate sprint day for event');
   }
 }
 
@@ -458,9 +504,143 @@ function displayCurrentItem(item) {
   
   if (questionField) questionField.value = item.question || '';
   if (clueField) clueField.value = item.clue || '';
-  if (answerField) answerField.value = item.answer || '';
+  
+  // Start with completely blank answer field
+  if (answerField) {
+    answerField.value = '';
+  }
+  
+  // Determine delay based on mode
+  let delay;
+  if (typeof mode !== 'undefined') {
+    if (mode === 'improve') {
+      delay = 6000; // 6 seconds for improve mode
+    } else if (mode === 'learn') {
+      delay = 2000; // 2 seconds for learn mode
+    } else {
+      delay = 3000; // 3 seconds for other modes
+    }
+  } else {
+    delay = 3000; // 3 seconds default
+  }
+  
+  console.log(`Answer will appear in ${delay/1000} seconds (mode: ${mode || 'default'})`);
+  
+  // Show answer after delay with fade-in effect on text only
+  setTimeout(() => {
+    if (answerField) {
+      answerField.style.opacity = '0';
+      answerField.value = item.answer || '';
+      answerField.style.transition = 'opacity 1s ease';
+      
+      // Fade in the text
+      setTimeout(() => {
+        answerField.style.opacity = '1';
+      }, 50);
+      
+      console.log(`Answer revealed: "${item.answer}"`);
+    }
+  }, delay);
+  
+  // Reset timer for new item display
+  itemDisplayStart = Date.now();
   
   console.log(`Displayed item ${item.ids}: Q="${item.question}" C="${item.clue}" A="${item.answer}"`);
+  console.log(`Item display timer started at: ${new Date(itemDisplayStart).toLocaleTimeString()}`);
+}
+
+// Load and display recent events for development
+async function loadRecentEvents() {
+  try {
+    console.log('🔄 Loading recent events...');
+    const content = localStorage.getItem('events');
+    if (!content) {
+      console.log('⚠️ No events content in localStorage');
+      updateEventsDisplay('Events count: 0\n\nNo events data found.');
+      return;
+    }
+    
+    console.log(`📄 Events content length: ${content.length} characters`);
+    
+    const lines = content.split(/\r\n|\r|\n/);
+    console.log(`📄 Split into ${lines.length} lines`);
+    
+    let eventLines = [];
+    let headerRowIndex = null;
+    
+    // Find header row
+    for (let i = 0; i < Math.min(10, lines.length); i++) {
+      const line = lines[i].trim();
+      if (line.includes('# headerRow =')) {
+        const match = line.match(/headerRow\s*=\s*(\d+)/);
+        if (match) {
+          headerRowIndex = parseInt(match[1]) - 1;
+          console.log(`📍 Header row found at index: ${headerRowIndex}`);
+          break;
+        }
+      }
+    }
+    
+    // Collect data lines (skip comments and header)
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line && !line.startsWith('#') && i !== headerRowIndex) {
+        eventLines.push(line);
+        if (eventLines.length <= 3) {
+          console.log(`📊 Event line ${i}: "${line}"`);
+        }
+      }
+    }
+    
+    console.log(`📊 Found ${eventLines.length} event data lines`);
+    
+    // Get last 3 events
+    const recentEvents = eventLines.slice(-3);
+    const totalEvents = eventLines.length;
+    
+    console.log(`📊 Recent events: ${recentEvents.length}, Total events: ${totalEvents}`);
+    
+    // Format display
+    let displayText = `Events count: ${totalEvents}\n\n`;
+    
+    if (recentEvents.length === 0) {
+      displayText += 'No events found.';
+    } else {
+      displayText += 'Recent events (last 3):\n';
+      recentEvents.forEach((event, index) => {
+        const columns = event.split('\t');
+        const id = columns[0] || '';
+        const action = columns[1] || '';
+        const result = columns[2] || '';
+        const duration = columns[3] || '';
+        const sprintDay = columns[4] || '';
+        const ap = columns[5] || '';
+        
+        displayText += `${index + 1}. ID:${id} Action:${action} Result:${result} Duration:${duration}s SprintDay:${sprintDay} A/P:${ap}\n`;
+      });
+    }
+    
+    console.log(`📝 Display text: "${displayText}"`);
+    updateEventsDisplay(displayText);
+    
+  } catch (error) {
+    console.error('❌ Error loading recent events:', error);
+    updateEventsDisplay('Error loading events data.');
+  }
+}
+
+// Update the events display field
+function updateEventsDisplay(text) {
+  console.log(`📺 Updating events display with: "${text.substring(0, 100)}..."`);
+  const eventsField = document.getElementById('events-display');
+  if (eventsField) {
+    eventsField.value = text;
+    // Scroll to bottom to show newest events
+    eventsField.scrollTop = eventsField.scrollHeight;
+    console.log('✅ Events display updated successfully');
+  } else {
+    console.log('❌ Events display field not found!');
+  }
 }
 
 // Clear all action form fields
@@ -524,9 +704,9 @@ function clearActionForm() {
 function setActionButtonLabelsByMode() {
   let label1, label2, label3;
   if (typeof mode !== 'undefined' && mode === 'learn') {
-    label1 = 'known';
-    label2 = 'familiar';
-    label3 = 'new';
+    label1 = 'known';    // Button 1 = known
+    label2 = 'familiar'; // Button 2 = familiar  
+    label3 = 'new';      // Button 3 = new
   } else {
     label1 = 'improve';
     label2 = 'OK';
@@ -547,11 +727,234 @@ function observeActionScreen() {
   observer.observe(actionScreen, { attributes: true, attributeFilter: ['class'] });
 }
 
+// Calculate current sprint day (moved outside DOMContentLoaded for global access)
+async function calculateSprintDay() {
+  try {
+    const settings = await dataManager.loadSettings();
+    if (!settings || !settings.startDate) return null;
+    
+    const today = new Date();
+    const start = new Date(settings.startDate);
+    const diffTime = today - start;
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays + 1;
+  } catch (error) {
+    console.error('Error calculating sprint day:', error);
+    return null;
+  }
+}
+
+// Add event to events storage
+async function addEventToStorage(itemId, action, result, duration, sprintDay) {
+  try {
+    console.log(`🔄 Creating event: ID=${itemId}, Action=${action}, Result=${result}, Duration=${duration}, SprintDay=${sprintDay}`);
+    
+    // Get current events data from localStorage
+    let content = localStorage.getItem('events');
+    if (!content) {
+      console.log('⚠️ Events data not found in localStorage, creating header structure...');
+      // Create the header structure if it doesn't exist
+      content = `# headerRow = 5
+# Action: improve | review | Learn | conjugate | listen | compose | errors
+#  Result: new | familiar | known | 0 | 0.5 | 1
+#  sDay: sprintDay ; A/P: active | passive ; warning: starting row = 5 is fixed
+ID	ACTION	RESULT	DURATION	SDAY	A/P`;
+      localStorage.setItem('events', content);
+      console.log('✅ Created events header structure in localStorage');
+    }
+    
+    // Get next event ID
+    let nextId = 1;
+    const lines = content.split(/\r\n|\r|\n/);
+    
+    // Find the highest existing ID
+    for (const line of lines) {
+      if (line && !line.startsWith('#') && !line.includes('ID\t')) {
+        const columns = line.split('\t');
+        if (columns.length > 0) {
+          const id = parseInt(columns[0]);
+          if (!isNaN(id) && id >= nextId) {
+            nextId = id + 1;
+          }
+        }
+      }
+    }
+    
+    // Create new event entry with curriculum item ID (not sequential event ID)
+    const newEvent = `${itemId}	${action}	${result}	${duration}	${sprintDay}	a`;
+    
+    // Append to existing content
+    const updatedContent = content + '\n' + newEvent;
+    
+    // Save back to localStorage
+    localStorage.setItem('events', updatedContent);
+    
+    console.log(`✅ Added event with curriculum item ID ${itemId}: Action=${action}, Result=${result}, Duration=${duration}, SprintDay=${sprintDay}`);
+    
+    // Try to save to file (this will work if we have a proper server)
+    try {
+      await saveEventsToFile(updatedContent);
+      console.log('✅ Events saved to file successfully');
+    } catch (error) {
+      console.log('⚠️ Could not save to file (requires server-side support):', error.message);
+      console.log('💡 Events are preserved in localStorage for this session');
+    }
+    
+    // Refresh events display for development
+    await loadRecentEvents();
+    
+  } catch (error) {
+    console.error('❌ Error adding event to storage:', error);
+  }
+}
+
+// Function to save events data back to the server file
+async function saveEventsToFile(content) {
+  // Note: This requires a server that can handle file writes
+  // The current Python HTTP server is read-only
+  const response = await fetch('/save-events', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      filename: 'events.tsv',
+      content: content
+    })
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+  }
+  
+  return response.json();
+}
+
+// Debug function to check userData loading and learnsRemaining calculation
+async function debugUserDataAndLearnsRemaining() {
+  const debugInfo = [];
+  
+  try {
+    // 1. Check raw userData file
+    debugInfo.push("=== DEBUGGING USERDATA AND LEARNS REMAINING ===");
+    
+    // Load raw file content
+    const response = await fetch('data/userData.tsv');
+    const rawContent = await response.text();
+    const rawLines = rawContent.split(/\r\n|\r|\n/);
+    
+    // Count level 0 items in raw file
+    let rawLevel0Count = 0;
+    let totalRawItems = 0;
+    
+    for (let i = 4; i < rawLines.length; i++) { // Skip header rows
+      const line = rawLines[i].trim();
+      if (line && !line.startsWith('#')) {
+        const columns = line.split('\t');
+        if (columns.length >= 3) {
+          totalRawItems++;
+          const level = parseInt(columns[2].trim());
+          if (level === 0) {
+            rawLevel0Count++;
+          }
+        }
+      }
+    }
+    
+    debugInfo.push(`1. RAW FILE CHECK:`);
+    debugInfo.push(`   - Total items in raw file: ${totalRawItems}`);
+    debugInfo.push(`   - Level 0 items in raw file: ${rawLevel0Count}`);
+    debugInfo.push(`   - Raw file shows unlearned items: ${rawLevel0Count > 0 ? 'YES' : 'NO'}`);
+    
+    // 2. Check localStorage content
+    const storageContent = localStorage.getItem('userData');
+    if (!storageContent) {
+      debugInfo.push(`2. LOCALSTORAGE CHECK: NO DATA FOUND`);
+    } else {
+      const storageLines = storageContent.split(/\r\n|\r|\n/);
+      let storageLevel0Count = 0;
+      let totalStorageItems = 0;
+      
+      for (let i = 4; i < storageLines.length; i++) { // Skip header rows
+        const line = storageLines[i].trim();
+        if (line && !line.startsWith('#')) {
+          const columns = line.split('\t');
+          if (columns.length >= 3) {
+            totalStorageItems++;
+            const level = parseInt(columns[2].trim());
+            if (level === 0) {
+              storageLevel0Count++;
+            }
+          }
+        }
+      }
+      
+      debugInfo.push(`2. LOCALSTORAGE CHECK:`);
+      debugInfo.push(`   - Total items in localStorage: ${totalStorageItems}`);
+      debugInfo.push(`   - Level 0 items in localStorage: ${storageLevel0Count}`);
+      debugInfo.push(`   - localStorage shows unlearned items: ${storageLevel0Count > 0 ? 'YES' : 'NO'}`);
+    }
+    
+    // 3. Check dataManager.loadUserData()
+    const userData = await dataManager.loadUserData();
+    if (!userData) {
+      debugInfo.push(`3. DATAMANAGER CHECK: NO DATA RETURNED`);
+    } else {
+      let dataManagerLevel0Count = 0;
+      userData.forEach(user => {
+        if (user.level === 0) {
+          dataManagerLevel0Count++;
+        }
+      });
+      
+      debugInfo.push(`3. DATAMANAGER CHECK:`);
+      debugInfo.push(`   - Total items from dataManager: ${userData.length}`);
+      debugInfo.push(`   - Level 0 items from dataManager: ${dataManagerLevel0Count}`);
+      debugInfo.push(`   - DataManager shows unlearned items: ${dataManagerLevel0Count > 0 ? 'YES' : 'NO'}`);
+    }
+    
+    // 4. Check learnsRemaining() function from general.js
+    if (typeof learnsRemaining === 'function') {
+      const remaining = await learnsRemaining();
+      debugInfo.push(`4. LEARNSREMAINING() RESULT: ${remaining}`);
+    } else {
+      debugInfo.push(`4. LEARNSREMAINING() FUNCTION: NOT AVAILABLE`);
+    }
+    
+  } catch (error) {
+    debugInfo.push(`ERROR IN DEBUG: ${error.message}`);
+  }
+  
+  // Display in events area
+  const eventsDiv = document.getElementById('events');
+  if (eventsDiv) {
+    eventsDiv.innerHTML = '<pre style="font-family: monospace; font-size: 12px; white-space: pre-wrap;">' + 
+                         debugInfo.join('\n') + '</pre>';
+  }
+  
+  // Also log to console
+  console.log(debugInfo.join('\n'));
+}
+
+// DOMContentLoaded event handler
 document.addEventListener('DOMContentLoaded', async function() {
   // Remove preload class to enable transitions after page is loaded
   setTimeout(() => {
     document.body.classList.remove('preload');
   }, 100);
+  
+  // Load all data files to localStorage first
+  console.log('🔄 Loading data files to localStorage...');
+  try {
+    await dataManager.loadAllToStorage();
+    console.log('✅ Data files loaded to localStorage');
+    
+    // Debug userData loading and learnsRemaining calculation
+    await debugUserDataAndLearnsRemaining();
+  } catch (error) {
+    console.error('❌ Error loading data files:', error);
+  }
   
   handleActionForm();
   handleActionButtons();
@@ -565,11 +968,14 @@ document.addEventListener('DOMContentLoaded', async function() {
       await buildCurrentItems(mode);
       console.log(`Loaded ${currentItems.length} items for mode ${mode}`);
       
-      // Update H2 with progress after loading items
+      // Update H2 header field with session progress after loading items
       updateH2WithProgress();
       
       // Load and display the first item
       await loadCurrentItem();
+      
+      // Load recent events for development display
+      await loadRecentEvents();
     } catch (error) {
       console.error(`Error loading items for mode ${mode}:`, error);
     }

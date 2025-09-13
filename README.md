@@ -302,6 +302,8 @@ This method creates a feedback loop where each session improves on the previous 
 | `loadTestScores(tsvContent)` | Load and analyze testScores.tsv | All | Returns scores + skill analytics |
 | `loadImprovements(tsvContent)` | Load and analyze improves.tsv | All | Returns improvements + analytics |
 | `calculateOverallAnalytics(allData)` | Cross-data analytics calculation | All | Comprehensive insights across all data |
+| `maxIDForLearnsToday()` | Calculate max item ID available for learning today | All | Returns max ID based on license tier and progress |
+| `getCurrentSprintDay(settings)` | Calculate current sprint day from start date | All | Returns day number (1-based) from curriculum start |
 | `logPerformance(func, source, time, error)` | Log function execution timing | All | Performance monitoring |
 | `getPerformanceSummary()` | Get timing statistics summary | All | Returns performance metrics |
 | `clearPerformanceLog()` | Clear performance log | All | Reset timing data |

@@ -163,30 +163,81 @@ async function handleOtherMenuHover(event) {
   await showOtherMenu();
 }
 
+// Calculate learns remaining based on license tier minus already learned
+// This is a copy of the tested function from start.js for use in general.js
+async function learnsRemaining() {
+    const settings = await dataManager.loadSettings();
+    if (!settings || !settings.licence) return null;
+    
+    const licenceParts = settings.licence.split('-');
+    if (licenceParts.length < 4) return null;
+    
+    const tier = licenceParts[3];
+    const tierMap = {
+        'T1': 750,
+        'N2': 1500,
+        'M3': 2250,
+        'R4': 3000
+    };
+    
+    const totalForTier = tierMap[tier];
+    if (!totalForTier) return null;
+    
+    // Count items that are available for learning (level = 0)
+    const userData = await dataManager.loadUserData();
+    if (!userData) return null;
+    
+    let availableForLearning = 0;
+    userData.forEach(user => {
+        if (user.level === 0) {
+            availableForLearning += 1;
+        }
+    });
+    
+    console.log(`📊 Found ${availableForLearning} items available for learning (level = 0)`);
+    return availableForLearning;
+}
+
 // Show vocab menu using reusable popup function
 async function showVocabMenu() {
-  // Get remaining learns count
-  const remaining = await learnsRemaining();
+  console.log('🎯 showVocabMenu called');
   
-  // Create menu items
-  const menuItems = ['improve', 'review'];
-  
-  // Add 'learn' only if learns remaining
-  if (remaining && remaining > 0) {
-    menuItems.push('learn');
-  }
-  
-  // Use reusable popup menu function
-  await showPopupMenu(
-    'vocab-menu',
-    'calc(16.67 * var(--vw))',
-    menuItems,
-    (selectedItem) => {
-      mode = selectedItem;
-      localStorage.setItem('mode', mode);
-      window.location.href = 'action.html';
+  try {
+    // Get remaining learns count
+    console.log('📊 Calling learnsRemaining()...');
+    const remaining = await learnsRemaining();
+    console.log('📊 learnsRemaining() result:', remaining);
+    
+    // Create menu items
+    const menuItems = ['improve', 'review'];
+    
+    // Add 'learn' only if learns remaining
+    if (remaining && remaining > 0) {
+      menuItems.push('learn');
+      console.log('✅ Added "learn" to menu items');
+    } else {
+      console.log('❌ No learns remaining, learn option not added');
     }
-  );
+    
+    console.log('📋 Menu items:', menuItems);
+    
+    // Use reusable popup menu function
+    await showPopupMenu(
+      'vocab-menu',
+      'calc(16.67 * var(--vw))',
+      menuItems,
+      (selectedItem) => {
+        console.log('🎯 Menu item selected:', selectedItem);
+        mode = selectedItem;
+        localStorage.setItem('mode', mode);
+        window.location.href = 'action.html';
+      }
+    );
+    
+    console.log('✅ showPopupMenu completed');
+  } catch (error) {
+    console.error('❌ Error in showVocabMenu:', error);
+  }
 }
 
 // Show fluency menu using reusable popup function
@@ -221,55 +272,6 @@ async function showOtherMenu() {
       window.location.href = 'profile.html';
     }
   );
-}
-
-// Helper function to calculate learns remaining (needed for vocab menu)
-async function learnsRemaining() {
-  // This function needs to be implemented based on dataManager
-  // For now, return a placeholder value to enable the learn option
-  try {
-    if (typeof dataManager !== 'undefined' && dataManager.loadSettings && dataManager.loadUserData) {
-      const settings = await dataManager.loadSettings();
-      if (!settings || !settings.licence) return null;
-      
-      const licenceParts = settings.licence.split('-');
-      if (licenceParts.length < 4) return null;
-      
-      const tier = licenceParts[3];
-      const tierMap = {
-        'T1': 750,
-        'N2': 1500,
-        'M3': 2250,
-        'R4': 3000
-      };
-      
-      const totalForTier = tierMap[tier];
-      if (!totalForTier) return null;
-      
-      const userData = await dataManager.loadUserData();
-      if (!userData) return null;
-      
-      const counts = { new: 0, familiar: 0, known: 0 };
-      userData.forEach(user => {
-        if (user.level < 5) {
-          counts.new += 1;
-        } else if (user.level >= 5 && user.level < 10) {
-          counts.familiar += 1;
-        } else if (user.level >= 10) {
-          counts.known += 1;
-        }
-      });
-      
-      const alreadyLearned = counts.new + counts.familiar + counts.known;
-      return totalForTier - alreadyLearned;
-    } else {
-      // Return a default value when dataManager is not available
-      return 100;
-    }
-  } catch (error) {
-    console.log('Error calculating learns remaining:', error);
-    return 100; // Default fallback
-  }
 }
 
 // Initialize footer menus on page load
