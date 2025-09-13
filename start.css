@@ -20,7 +20,142 @@
 }
 
 /* Centered text overlay for percentage */
-/* start.css - cleaned */
+/* start.css - complete styling */
+
+/* CSS Variables for responsive design */
+:root {
+  --vw: calc(100vw / 100);
+  --vh: calc(100vh / 100);
+}
+
+/* Global reset and base styling */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 100vw;
+  height: 100vh;
+  box-sizing: border-box;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: #f8f9fa;
+}
+
+.app-skeleton {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e9ecef;
+}
+
+.responsive-box {
+  width: 100vw;
+  height: 100vh;
+  background: #fff;
+  border-radius: 0;
+  position: relative;
+  box-shadow: 0 0 calc(var(--vw) * 1) rgba(0,0,0,0.1);
+  border: 1pt solid #333;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  font-size: calc(var(--vw) * 2);
+  color: #333;
+}
+
+.skeleton-header, .skeleton-footer {
+  height: 10vh;
+  background: rgb(0,119,123);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--vw) * 2);
+  font-weight: bold;
+  position: relative;
+}
+
+.skeleton-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.footer-fields {
+  width: 90%;
+  margin-left: 5%;
+  margin-right: 5%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100%;
+}
+
+.footer-field:active, .footer-field:focus {
+  background: rgba(0,119,123,0.2);
+}
+
+.footer-field {
+  text-decoration: none;
+  color: white;
+  font-size: calc(var(--vw) * 2);
+  text-align: center;
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-fields {
+  width: 90%;
+  margin-left: 5%;
+  margin-right: 5%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100%;
+}
+
+/* Chart specific styling */
+.chart-container {
+  position: relative;
+  width: calc(var(--vh) * 35);
+  height: calc(var(--vh) * 35);
+  margin: calc(var(--vh) * 5) auto;
+  border-radius: calc(var(--vh) * 2);
+  background: white;
+  box-shadow: 0 calc(var(--vh) * 1) calc(var(--vh) * 3) rgba(0,0,0,0.1);
+  padding: calc(var(--vh) * 2);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart-container canvas {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.chart-center-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: calc(var(--vh) * 18);
+  font-weight: 700;
+  color: rgb(0,119,123);
+  text-align: center;
+  z-index: 10;
+  pointer-events: none;
+}
 
 /* Start screen background styling */
 .screen-start {
