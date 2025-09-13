@@ -2,18 +2,113 @@
 <html>
 <head>
     <title>Count Events Test</title>
+    <style>
+        .button-group {
+            margin: 10px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .button-group h3 {
+            width: 100%;
+            margin: 5px 0;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        button {
+            padding: 8px 12px;
+            margin: 2px;
+            border: 1px solid #ccc;
+            background: #f9f9f9;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        
+        button:hover {
+            background: #e9e9e9;
+        }
+        
+        textarea {
+            width: 100%;
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Event Counter</h1>
+    <h1>Data Test Console</h1>
     
-    <button onclick="countEvents()">Count Events</button>
-    <button onclick="countUserData()">Count User Data</button>
-    <button onclick="findNickname()">Find Nickname</button>
+    <div class="button-group">
+        <h3>Storage Management</h3>
+        <button onclick="clearStorage()">Clear Storage</button>
+        <button onclick="loadAllData()">Load All Data</button>
+    </div>
     
-    <textarea id="output" rows="10" cols="50"></textarea>
+    <div class="button-group">
+        <h3>Data Counting</h3>
+        <button onclick="countEvents()">Count Events</button>
+        <button onclick="countUserData()">Count User Data</button>
+        <button onclick="countCurriculum()">Count Curriculum</button>
+    </div>
+    
+    <div class="button-group">
+        <h3>Mode Testing</h3>
+        <button onclick="testImproves()">Test Improves</button>
+        <button onclick="testReview()">Test Review</button>
+        <button onclick="testLearn()">Test Learn</button>
+        <button onclick="testVerbs()">Test Verbs</button>
+        <button onclick="testListening()">Test Listening</button>
+        <button onclick="testComposition()">Test Composition</button>
+        <button onclick="testErrors()">Test Errors</button>
+    </div>
+    
+    <div class="button-group">
+        <h3>Debug Testing</h3>
+        <button onclick="testCurriculumLoading()">Test Curriculum Loading</button>
+        <button onclick="testRawCurriculum()">Test Raw Curriculum TSV</button>
+        <button onclick="testCurriculumRange()">Test Rows 3000-3300 Themes</button>
+        <button onclick="testCurriculumStructure()">Test Curriculum Structure</button>
+        <button onclick="debugReview()">Debug Review</button>
+        <button onclick="debugBuildItems()">Debug Build Items</button>
+    </div>
+    
+    <div class="button-group">
+        <h3>Data Search</h3>
+        <button onclick="findNickname()">Find Nickname</button>
+        <button onclick="testMaxID()">Test MaxID</button>
+        <button onclick="testMaxIDForLearns()">Test Max ID For Learns</button>
+    </div>
+    
+    <textarea id="output" rows="15" cols="80"></textarea>
     
     <script src="dataManager.js"></script>
+    <script src="start.js"></script>
+    <script src="general.js"></script>
+    <script src="action.js"></script>
     <script>
+        async function loadAllData() {
+            const startTime = performance.now();
+            document.getElementById('output').value = 'Loading all data files...';
+            
+            try {
+                await dataManager.loadAllToStorage();
+                const endTime = performance.now();
+                const time = (endTime - startTime).toFixed(2);
+                
+                document.getElementById('output').value = `All data loaded successfully!\nTime: ${time}ms\n\nNow you can use the count buttons.`;
+            } catch (error) {
+                const endTime = performance.now();
+                const time = (endTime - startTime).toFixed(2);
+                document.getElementById('output').value = `Error loading data: ${error.message}\nTime: ${time}ms`;
+            }
+        }
+        
+        function clearStorage() {
+            localStorage.clear();
+            document.getElementById('output').value = 'localStorage cleared. Click "Load All Data" to reload fresh data.';
+        }
+        
         function countEvents() {
             const startTime = performance.now();
             
@@ -69,6 +164,187 @@
             document.getElementById('output').value = `User Data: ${dataLines} data lines (${allLines.length} total, header at line ${headerRowIndex + 1})\nTime: ${time}ms`;
         }
         
+        async function testImproves() {
+            const startTime = performance.now();
+            document.getElementById('output').value = 'Testing improves functionality...';
+            
+            try {
+                // Test improve mode
+                const testMode = 'improve';
+                
+                // Build current items
+                const items = await buildCurrentItems(testMode);
+                
+                const endTime = performance.now();
+                const time = (endTime - startTime).toFixed(2);
+                
+                document.getElementById('output').value = 
+                    `Improves Test Results:\n` +
+                    `Mode: ${testMode}\n` +
+                    `Items loaded: ${items.length}\n` +
+                    `Time: ${time}ms\n\n` +
+                    `First 10 IDs:\n${items.slice(0, 10).join('\n')}\n\n` +
+                    `Last 5 IDs:\n${items.slice(-5).join('\n')}`;
+                    
+            } catch (error) {
+                const endTime = performance.now();
+                const time = (endTime - startTime).toFixed(2);
+                document.getElementById('output').value = `Error testing improves: ${error.message}\nTime: ${time}ms`;
+            }
+        }
+        
+        async function testReview() {
+            const startTime = performance.now();
+            document.getElementById('output').value = 'Testing review functionality...';
+            
+            try {
+                // Test review mode
+                const testMode = 'review';
+                
+                // Build current items
+                const items = await buildCurrentItems(testMode);
+                
+                const endTime = performance.now();
+                const time = (endTime - startTime).toFixed(2);
+                
+                // Calculate current sprint day for display
+                const sprintDay = await calculateSprintDay();
+                
+                document.getElementById('output').value = 
+                    `Review Test Results:\n` +
+                    `Mode: ${testMode}\n` +
+                    `Current Sprint Day: ${sprintDay}\n` +
+                    `Items loaded: ${items.length}\n` +
+                    `Time: ${time}ms\n\n` +
+                    `First 10 IDs:\n${items.slice(0, 10).join('\n')}\n\n` +
+                    `Last 5 IDs:\n${items.slice(-5).join('\n')}`;
+                    
+            } catch (error) {
+                const endTime = performance.now();
+                const time = (endTime - startTime).toFixed(2);
+                document.getElementById('output').value = `Error testing review: ${error.message}\nTime: ${time}ms`;
+            }
+        }
+        
+        async function debugReview() {
+            const startTime = performance.now();
+            document.getElementById('output').value = 'Debugging review functionality...';
+            
+            try {
+                // Check userData in localStorage
+                const content = localStorage.getItem('userData');
+                if (!content) {
+                    document.getElementById('output').value = 'ERROR: No userData found in localStorage';
+                    return;
+                }
+                
+                const lines = content.split(/\r\n|\r|\n/);
+                let debugInfo = `UserData Debug:\n`;
+                debugInfo += `Total lines: ${lines.length}\n`;
+                debugInfo += `First 5 lines:\n`;
+                
+                for (let i = 0; i < Math.min(5, lines.length); i++) {
+                    debugInfo += `Line ${i}: "${lines[i]}"\n`;
+                }
+                
+                // Find header row
+                let headerRowIndex = null;
+                for (let i = 0; i < Math.min(10, lines.length); i++) {
+                    const line = lines[i].trim();
+                    if (line.includes('# headerRow =')) {
+                        const match = line.match(/headerRow\s*=\s*(\d+)/);
+                        if (match) {
+                            headerRowIndex = parseInt(match[1]) - 1;
+                            debugInfo += `Header row found at index: ${headerRowIndex}\n`;
+                            break;
+                        }
+                    }
+                }
+                
+                // Check current sprint day
+                const sprintDay = await calculateSprintDay();
+                debugInfo += `Current Sprint Day: ${sprintDay}\n`;
+                
+                // Sample first few data rows AND some from around row 100
+                debugInfo += `\nFirst 3 data rows:\n`;
+                let dataRowCount = 0;
+                for (let i = 0; i < lines.length && dataRowCount < 3; i++) {
+                    const line = lines[i].trim();
+                    if (line && !line.startsWith('#') && i !== headerRowIndex) {
+                        const columns = line.split('\t');
+                        debugInfo += `Row ${i}: ID="${columns[0]}" NRD="${columns[1]}" LEVEL="${columns[2]}"\n`;
+                        debugInfo += `  NRD ${columns[1]} <= ${sprintDay}? ${parseInt(columns[1]) <= sprintDay}\n`;
+                        dataRowCount++;
+                    }
+                }
+                
+                debugInfo += `\nRows around 100-110 (where qualifying data should be):\n`;
+                for (let i = 100; i < Math.min(115, lines.length); i++) {
+                    const line = lines[i].trim();
+                    if (line && !line.startsWith('#') && i !== headerRowIndex) {
+                        const columns = line.split('\t');
+                        debugInfo += `Row ${i}: ID="${columns[0]}" NRD="${columns[1]}" LEVEL="${columns[2]}"\n`;
+                        debugInfo += `  NRD ${columns[1]} <= ${sprintDay}? ${parseInt(columns[1]) <= sprintDay}\n`;
+                    }
+                }
+                
+                const endTime = performance.now();
+                const time = (endTime - startTime).toFixed(2);
+                debugInfo += `\nTime: ${time}ms`;
+                
+                document.getElementById('output').value = debugInfo;
+                
+            } catch (error) {
+                document.getElementById('output').value = `Debug error: ${error.message}`;
+            }
+        }
+        
+        async function debugBuildItems() {
+            const startTime = performance.now();
+            document.getElementById('output').value = 'Debugging buildCurrentItems function...';
+            
+            try {
+                // Test review mode specifically
+                const testMode = 'review';
+                
+                // Call buildCurrentItems with mode parameter and debug flag
+                const result = await buildCurrentItems(testMode, true);
+                
+                const endTime = performance.now();
+                const time = (endTime - startTime).toFixed(2);
+                
+                document.getElementById('output').value = 
+                    `Debug Build Items Results:\n` +
+                    `Mode: ${testMode}\n` +
+                    `Items returned: ${result.items.length}\n` +
+                    `Items array: [${result.items.join(', ')}]\n` +
+                    `Time: ${time}ms\n\n` +
+                    `Detailed Debug Log:\n` +
+                    result.debugLog.join('\n');
+                    
+            } catch (error) {
+                const endTime = performance.now();
+                const time = (endTime - startTime).toFixed(2);
+                document.getElementById('output').value = `Error in debugBuildItems: ${error.message}\nTime: ${time}ms`;
+            }
+        }
+        
+        function countCurriculum() {
+            const startTime = performance.now();
+            
+            const content = localStorage.getItem('curriculum');
+            if (!content) {
+                document.getElementById('output').value = 'No curriculum data found';
+                return;
+            }
+            
+            const lines = content.split(/\r\n|\r|\n/).length;
+            const endTime = performance.now();
+            const time = (endTime - startTime).toFixed(2);
+            
+            document.getElementById('output').value = `Curriculum: ${lines} lines\nTime: ${time}ms`;
+        }
+        
         function findNickname() {
             const startTime = performance.now();
             
@@ -113,6 +389,291 @@
                 document.getElementById('output').value = `Nickname found: "${nickname}"\nTime: ${time}ms`;
             } else {
                 document.getElementById('output').value = `Nickname not found\nTime: ${time}ms`;
+            }
+        }
+        
+        async function testMaxID() {
+            const startTime = performance.now();
+            document.getElementById('output').value = 'Testing maxID function...';
+            
+            try {
+                const maxIdValue = await maxID();
+                
+                const endTime = performance.now();
+                const time = (endTime - startTime).toFixed(2);
+                
+                // Also get license for display
+                const settings = await dataManager.loadSettings();
+                const license = settings ? settings.licence : 'Not found';
+                
+                document.getElementById('output').value = 
+                    `MaxID Test Results:\n` +
+                    `License: ${license}\n` +
+                    `MaxID: ${maxIdValue}\n` +
+                    `Time: ${time}ms`;
+                    
+            } catch (error) {
+                const endTime = performance.now();
+                const time = (endTime - startTime).toFixed(2);
+                document.getElementById('output').value = `Error testing maxID: ${error.message}\nTime: ${time}ms`;
+            }
+        }
+        
+        async function testMaxIDForLearns() {
+            const startTime = performance.now();
+            document.getElementById('output').value = 'Testing maxIDForLearnsToday function...';
+            
+            try {
+                const result = await maxIDForLearnsToday();
+                
+                const endTime = performance.now();
+                const time = (endTime - startTime).toFixed(2);
+                
+                document.getElementById('output').value = 
+                    `Max ID For Learns Test Results:\n` +
+                    `Current Sprint Day: ${result.currentSprintDay}\n` +
+                    `Time-Based Limit: ${result.timeBasedLimit} (${result.currentSprintDay} × 25)\n` +
+                    `License-Based Limit: ${result.licenseBasedLimit}\n` +
+                    `Max ID For Learns: ${result.maxIDForLearns} (smaller of both)\n` +
+                    `Time: ${time}ms\n\n` +
+                    `Calculation Breakdown:\n${result.breakdown}`;
+                    
+            } catch (error) {
+                const endTime = performance.now();
+                const time = (endTime - startTime).toFixed(2);
+                document.getElementById('output').value = `Error testing max ID for learns: ${error.message}\nTime: ${time}ms`;
+            }
+        }
+        
+        async function testLearn() {
+            const startTime = performance.now();
+            document.getElementById('output').value = 'Testing learn functionality...';
+            
+            try {
+                // Test learn mode
+                const testMode = 'learn';
+                
+                // Build current items
+                const items = await buildCurrentItems(testMode);
+                
+                const endTime = performance.now();
+                const time = (endTime - startTime).toFixed(2);
+                
+                // Get max ID for context
+                const maxIDResult = await maxIDForLearnsToday();
+                
+                document.getElementById('output').value = 
+                    `Learn Test Results:\n` +
+                    `Mode: ${testMode}\n` +
+                    `Max ID For Learns: ${maxIDResult.maxIDForLearns}\n` +
+                    `Items loaded: ${items.length}\n` +
+                    `Time: ${time}ms\n\n` +
+                    `First 10 IDs:\n${items.slice(0, 10).join('\n')}\n\n` +
+                    `Last 5 IDs:\n${items.slice(-5).join('\n')}`;
+                    
+            } catch (error) {
+                const endTime = performance.now();
+                const time = (endTime - startTime).toFixed(2);
+                document.getElementById('output').value = `Error testing learn: ${error.message}\nTime: ${time}ms`;
+            }
+        }
+        
+        async function testVerbs() {
+            await testThemeMode('verbs', 'verbConjugation');
+        }
+        
+        async function testListening() {
+            await testThemeMode('listening', 'listen');
+        }
+        
+        async function testComposition() {
+            await testThemeMode('composition', 'compose');
+        }
+        
+        async function testErrors() {
+            await testThemeMode('errors', 'ERRORS');
+        }
+        
+        async function testCurriculumLoading() {
+            document.getElementById('output').value = 'Testing curriculum loading...';
+            
+            try {
+                const curriculum = await dataManager.loadCurriculum();
+                
+                if (!curriculum) {
+                    document.getElementById('output').value = 'No curriculum data returned';
+                    return;
+                }
+                
+                let output = `Curriculum loaded: ${curriculum.length} items\n\n`;
+                output += 'All rows and columns:\n';
+                
+                for (let i = 0; i < curriculum.length; i++) {
+                    const item = curriculum[i];
+                    output += `Row ${i + 1}: ${JSON.stringify(item)}\n\n`;
+                }
+                
+                document.getElementById('output').value = output;
+                
+            } catch (error) {
+                document.getElementById('output').value = `Error: ${error.message}`;
+            }
+        }
+        
+        async function testRawCurriculum() {
+            document.getElementById('output').value = 'Testing raw curriculum TSV...';
+            
+            try {
+                const content = localStorage.getItem('curriculum');
+                if (!content) {
+                    document.getElementById('output').value = 'No curriculum content in localStorage';
+                    return;
+                }
+                
+                const lines = content.split(/\r\n|\r|\n/);
+                let output = `Raw TSV lines: ${lines.length}\n\n`;
+                
+                for (let i = 0; i < Math.min(20, lines.length); i++) {
+                    output += `Line ${i + 1}: ${lines[i]}\n`;
+                }
+                
+                document.getElementById('output').value = output;
+                
+            } catch (error) {
+                document.getElementById('output').value = `Error: ${error.message}`;
+            }
+        }
+        
+        async function testCurriculumRange() {
+            document.getElementById('output').value = 'Testing curriculum rows 3000-3300...';
+            
+            try {
+                const curriculum = await dataManager.loadCurriculum();
+                
+                if (!curriculum || curriculum.length === 0) {
+                    document.getElementById('output').value = 'No curriculum data';
+                    return;
+                }
+                
+                let output = `Curriculum total: ${curriculum.length} items\n\n`;
+                output += 'Full rows 3000-3020:\n';
+                
+                const startIdx = 2999; // 0-indexed for row 3000
+                const endIdx = Math.min(3019, curriculum.length - 1); // 0-indexed for row 3020
+                
+                for (let i = startIdx; i <= endIdx; i++) {
+                    if (i < curriculum.length) {
+                        const item = curriculum[i];
+                        output += `Row ${i + 1}: ${JSON.stringify(item)}\n\n`;
+                    }
+                }
+                
+                document.getElementById('output').value = output;
+                
+            } catch (error) {
+                document.getElementById('output').value = `Error: ${error.message}`;
+            }
+        }
+        
+        async function testCurriculumStructure() {
+            document.getElementById('output').value = 'Testing curriculum structure...';
+            
+            try {
+                // Load raw curriculum content first
+                const content = localStorage.getItem('curriculum');
+                if (!content) {
+                    document.getElementById('output').value = 'No curriculum content in localStorage';
+                    return;
+                }
+                
+                const lines = content.split(/\r\n|\r|\n/);
+                let output = `Raw curriculum lines: ${lines.length}\n\n`;
+                
+                // Find header row
+                let headerRowIndex = -1;
+                for (let i = 0; i < lines.length; i++) {
+                    if (lines[i].trim() && !lines[i].startsWith('#')) {
+                        headerRowIndex = i;
+                        break;
+                    }
+                }
+                
+                if (headerRowIndex >= 0) {
+                    const headerColumns = lines[headerRowIndex].split('\t');
+                    output += `Header row ${headerRowIndex}:\n`;
+                    for (let i = 0; i < headerColumns.length; i++) {
+                        output += `  [${i}]: "${headerColumns[i]}"\n`;
+                    }
+                    output += '\n';
+                }
+                
+                // Find first verbConjugation line
+                let sampleLine = null;
+                let sampleLineIndex = -1;
+                for (let i = headerRowIndex + 1; i < lines.length; i++) {
+                    if (lines[i].includes('verbConjugation')) {
+                        sampleLine = lines[i];
+                        sampleLineIndex = i;
+                        break;
+                    }
+                }
+                
+                if (sampleLine) {
+                    const columns = sampleLine.split('\t');
+                    output += `Sample verbConjugation line ${sampleLineIndex}:\n`;
+                    for (let i = 0; i < columns.length; i++) {
+                        output += `  [${i}]: "${columns[i]}"\n`;
+                    }
+                    output += '\n';
+                    output += `Theme at columns[6]: "${columns[6]}"\n`;
+                }
+                
+                // Also test the parsed structure
+                const curriculum = await dataManager.loadCurriculum();
+                if (curriculum && curriculum.length > 0) {
+                    const verbItems = curriculum.filter(item => item.theme === 'verbConjugation');
+                    output += `\nParsed curriculum: ${curriculum.length} items\n`;
+                    output += `verbConjugation theme count: ${verbItems.length}\n`;
+                    if (verbItems.length > 0) {
+                        output += `First verbConjugation item:\n`;
+                        output += `  ids: "${verbItems[0].ids}"\n`;
+                        output += `  theme: "${verbItems[0].theme}"\n`;
+                        output += `  question: "${verbItems[0].question}"\n`;
+                    }
+                } else {
+                    output += '\nNo parsed curriculum data found';
+                }
+                
+                document.getElementById('output').value = output;
+                
+            } catch (error) {
+                document.getElementById('output').value = `Error: ${error.message}`;
+            }
+        }
+        
+        async function testThemeMode(mode, expectedTheme) {
+            const startTime = performance.now();
+            document.getElementById('output').value = `Testing ${mode} functionality...`;
+            
+            try {
+                // Build current items
+                const items = await buildCurrentItems(mode);
+                
+                const endTime = performance.now();
+                const time = (endTime - startTime).toFixed(2);
+                
+                document.getElementById('output').value = 
+                    `${mode.charAt(0).toUpperCase() + mode.slice(1)} Test Results:\n` +
+                    `Mode: ${mode}\n` +
+                    `Expected Theme: ${expectedTheme}\n` +
+                    `Items loaded: ${items.length}\n` +
+                    `Time: ${time}ms\n\n` +
+                    `Random IDs (up to 10):\n${items.join('\n')}`;
+                    
+            } catch (error) {
+                const endTime = performance.now();
+                const time = (endTime - startTime).toFixed(2);
+                document.getElementById('output').value = `Error testing ${mode}: ${error.message}\nTime: ${time}ms`;
             }
         }
     </script>

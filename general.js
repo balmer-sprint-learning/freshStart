@@ -78,6 +78,74 @@ function validateInput(value, maxLength) {
   return value && value.length <= maxLength;
 }
 
+// Get maximum ID based on user license tier
+async function maxID() {
+  try {
+    // Get user settings to find license
+    const settings = await dataManager.loadSettings();
+    if (!settings || !settings.licence) {
+      throw new Error('License not found in settings');
+    }
+    
+    const license = settings.licence;
+    console.log(`License: ${license}`);
+    
+    // Extract tier from license (format: XX-XXX-XX-TX-X-XXX where TX is the tier)
+    const tierMatch = license.match(/-(T1|N2|M3|R4)-/);
+    if (!tierMatch) {
+      throw new Error(`Could not extract tier from license: ${license}`);
+    }
+    
+    const tier = tierMatch[1];
+    console.log(`Tier: ${tier}`);
+    
+    // Return max ID based on tier
+    switch(tier) {
+      case 'T1': return 750;
+      case 'N2': return 1500;
+      case 'M3': return 2250;
+      case 'R4': return 3000;
+      default: 
+        throw new Error(`Unknown tier: ${tier}`);
+    }
+  } catch (error) {
+    console.error('Error in maxID():', error);
+    throw error;
+  }
+}
+
+// Calculate maximum ID allowed for learns today
+async function maxIDForLearnsToday() {
+  try {
+    // Get current sprint day
+    const currentSprintDay = await calculateSprintDay();
+    if (!currentSprintDay) {
+      throw new Error('Could not calculate current sprint day');
+    }
+    
+    // Calculate time-based limit (sprintDay * 25)
+    const timeBasedLimit = currentSprintDay * 25;
+    
+    // Get license-based limit from tier
+    const licenseBasedLimit = await maxID();
+    
+    // Max ID for learns is the smaller of the two limits
+    const maxIDForLearns = Math.min(timeBasedLimit, licenseBasedLimit);
+    
+    return {
+      currentSprintDay: currentSprintDay,
+      timeBasedLimit: timeBasedLimit,
+      licenseBasedLimit: licenseBasedLimit,
+      maxIDForLearns: maxIDForLearns,
+      breakdown: `Sprint day: ${currentSprintDay}, Time limit (${currentSprintDay} × 25): ${timeBasedLimit}, License limit: ${licenseBasedLimit}, Max ID for learns: ${maxIDForLearns} (smaller of both)`
+    };
+    
+  } catch (error) {
+    console.error('Error in maxIDForLearnsToday():', error);
+    throw error;
+  }
+}
+
 // Reusable popup menu function
 async function showPopupMenu(menuId, leftPosition, menuItems, clickHandler) {
   // Remove existing menus if present

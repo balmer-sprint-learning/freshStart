@@ -16,7 +16,15 @@ A responsive single-page web application with three main screens: Profile, Start
 └── README.md          # This context document
 ```
 
-### Key Design Principles Established
+### Development Principles
+
+### Code Quality Standards
+- **No Silent Conditions**: Never add filtering conditions (like `if (array.length >= N)`) without explicit discussion and justification
+- **Systematic Debugging**: When problems arise, check own code systematically before making assumptions about external factors
+- **Honest Problem Assessment**: Do not claim to have "found the problem" without verification through testing
+- **Discuss Before Code**: Always discuss approach and reasoning before implementing, especially for data parsing and filtering logic
+
+### Established Patterns
 
 1. **NO inline styles** - All CSS must be in styles.css
 2. **Responsive design** - Uses CSS variables `--vw` and `--vh` for scaling
@@ -39,6 +47,16 @@ A responsive single-page web application with three main screens: Profile, Start
 - **Centralized Data Management** - Use dataManager for all TSV parsing operations
 - **Shared Utilities** - Extract common patterns (like header row parsing) into reusable functions
 - **Incremental Testing** - Create simple test pages to validate functionality before integration
+
+## Principles for Working with GitHub Copilot
+
+- Always work step-by-step, one small change at a time, confirming each step before moving on.
+- Do not add any code, error handling, or conditions that have not been discussed and agreed upon.
+- Never add defensive or filtering logic (such as column count checks) unless explicitly requested.
+- Only do the work requested, with minimal necessary error handling.
+- If unsure about data format or requirements, ask for clarification before coding.
+- Communicate clearly about any assumptions or changes before implementation.
+- If you deviate from these principles, expect to be called out and correct course immediately.
 
 ## Programming Method - Lessons from Development
 

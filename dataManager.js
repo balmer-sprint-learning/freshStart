@@ -3,7 +3,7 @@
  */
 class DataManager {
     constructor() {
-        this.files = ['events', 'userData', 'testScores', 'settings', 'improves', 'conjugations'];
+        this.files = ['events', 'userData', 'testScores', 'settings', 'improves', 'conjugations', 'curriculum'];
         this.performanceLog = []; // For the test page
     }
 
@@ -29,7 +29,16 @@ class DataManager {
         
         for (const filename of this.files) {
             try {
-                const response = await fetch(`data/${filename}.tsv`);
+                // Add cache-busting to ensure fresh data
+                const timestamp = new Date().getTime();
+                const response = await fetch(`data/${filename}.tsv?t=${timestamp}`, {
+                    cache: 'no-cache',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                });
                 const content = await response.text();
                 const lineCount = content.split(/\r\n|\r|\n/).length;
                 
@@ -152,6 +161,40 @@ class DataManager {
         }
         
         return settings;
+    }
+    async loadCurriculum() { 
+        const content = localStorage.getItem('curriculum');
+        if (!content) return null;
+        
+        const lines = content.split(/\r\n|\r|\n/);
+        const headerRowIndex = this.findHeaderRowIndex(lines);
+        const curriculum = [];
+        
+        // Parse data lines
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line && !line.startsWith('#') && i !== headerRowIndex) {
+                const columns = line.split('\t');
+                curriculum.push({
+                    ids: (columns[0]||"").trim(),
+                    question: (columns[1]||"").trim(),
+                    answer: (columns[2]||"").trim(),
+                    audio: (columns[3]||"").trim(),
+                    info: (columns[4]||"").trim(),
+                    clue: (columns[5]||"").trim(),
+                    theme: (columns[6]||"").trim(),
+                    subtype: (columns[7]||"").trim(),
+                    level: (columns[8]||"").trim(),
+                    seq: columns[9] ? parseInt(columns[9].trim()) : "",
+                    type: (columns[10]||"").trim(),
+                    person: (columns[11]||"").trim(),
+                    tense: (columns[12]||"").trim(),
+                    comment: (columns[13]||"").trim()
+                });
+            }
+        }
+        
+        return curriculum;
     }
     async loadImprovements() { throw new Error('loadImprovements not implemented yet'); }
     calculateOverallAnalytics() { throw new Error('calculateOverallAnalytics not implemented yet'); }
