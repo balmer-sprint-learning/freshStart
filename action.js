@@ -352,7 +352,36 @@ function clearActionForm() {
 }
 
 // Initialize action screen functionality
+// Update action button labels based on mode
+function setActionButtonLabelsByMode() {
+  let label1, label2, label3;
+  if (typeof mode !== 'undefined' && mode === 'learn') {
+    label1 = 'known';
+    label2 = 'familiar';
+    label3 = 'new';
+  } else {
+    label1 = 'improve';
+    label2 = 'OK';
+    label3 = 'Good';
+  }
+  updateButtonLabels(label1, label2, label3);
+}
+
+// Listen for action screen activation
+function observeActionScreen() {
+  const actionScreen = document.querySelector('.screen-action');
+  if (!actionScreen) return;
+  const observer = new MutationObserver(() => {
+    if (actionScreen.classList.contains('active')) {
+      setActionButtonLabelsByMode();
+    }
+  });
+  observer.observe(actionScreen, { attributes: true, attributeFilter: ['class'] });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   handleActionForm();
   handleActionButtons();
+  setActionButtonLabelsByMode();
+  observeActionScreen();
 });

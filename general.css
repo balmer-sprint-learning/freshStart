@@ -1,0 +1,28 @@
+/* General header and footer styles for the app */
+.header-field {
+  flex: 1;
+  text-align: center;
+  font-size: 5vh;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  height: 50%;
+}
+
+.footer-field {
+  flex: 1;
+  text-align: center;
+  font-size: 5vh;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  outline: none;
+  height: 50%;
+}

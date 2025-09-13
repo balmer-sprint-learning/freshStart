@@ -1,0 +1,60 @@
+/* Start screen specific styling */
+
+/* Chart container for the doughnut chart */
+.chart-container {
+  position: relative;
+  width: calc(var(--vh) * 40);
+  height: calc(var(--vh) * 40);
+  max-width: 400px;
+  max-height: 400px;
+  margin: calc(var(--vh) * 5) auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Canvas element for Chart.js */
+#retentionChart {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Centered text overlay for percentage */
+/* start.css - cleaned */
+
+/* Start screen background styling */
+.screen-start {
+  background: rgba(240, 249, 255, 0.1); /* light blue tint matching gradient theme */
+}
+
+/* Header styling for start screen */
+.screen-start.active .header-field:nth-child(1) {
+  /* H1 - Nickname */
+  font-size: calc(var(--vh) * 4);
+  color: #1f2937;
+}
+
+.screen-start.active .header-field:nth-child(2) {
+  /* H2 - Sprint Day */
+  font-size: calc(var(--vh) * 3.5);
+  color: #374151;
+}
+
+.screen-start.active .header-field:nth-child(3) {
+  /* H3 - Total Time */
+  font-size: calc(var(--vh) * 3);
+  color: #6b7280;
+}
+
+/* Footer button styling for start screen (when it shows Vocab/Fluency/Other) */
+.screen-start.active ~ .skeleton-footer .footer-field {
+  background: rgba(0,119,123,0.1);
+  border-radius: calc(var(--vh) * 1);
+  margin: 0 calc(var(--vw) * 1);
+  transition: all 0.2s ease;
+}
+
+.screen-start.active ~ .skeleton-footer .footer-field:hover {
+  background: rgba(0,119,123,0.2);
+  transform: scale(1.05);
+}

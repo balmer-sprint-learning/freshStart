@@ -1,3 +1,118 @@
+  outline: none;
+  border: none;
+}
+}
+.action-question-field:focus {
+  outline: none;
+  border: none;
+}
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  background: #fff;
+  border: none;
+  width: 90vw;
+  max-width: 90vw;
+  display: block;
+  margin: 0 auto 0 auto;
+  padding: calc(var(--vh) * 2) calc(var(--vw) * 2) 0 calc(var(--vw) * 2);
+  font-size: calc(var(--vh) * 3);
+  color: #1f2937;
+  border-radius: 0;
+  box-shadow: none;
+  text-align: center;
+}
+
+.action-clue-field {
+  background: #fff;
+  border: none;
+  width: 90vw;
+  max-width: 90vw;
+  display: block;
+  margin: 0 auto 0 auto;
+  padding: 0 calc(var(--vw) * 2) 0 calc(var(--vw) * 2);
+  font-size: calc(var(--vh) * 3);
+  color: #1f2937;
+  border-radius: 0;
+  box-shadow: none;
+  text-align: center;
+}
+.action-clue-field:focus {
+  outline: none;
+  border: none;
+}
+  background: #fff;
+  border: none;
+  width: 90vw;
+  max-width: 90vw;
+  display: block;
+  margin: 0 auto 0 auto;
+  padding: 0 calc(var(--vw) * 2) calc(var(--vh) * 2) calc(var(--vw) * 2);
+  font-size: calc(var(--vh) * 3);
+  color: #1f2937;
+  border-radius: 0;
+  box-shadow: none;
+  text-align: center;
+}
+.action-answer-field:focus {
+  outline: none;
+  border: none;
+}
+  width: 90vw;
+  max-width: 90vw;
+  min-width: 90vw;
+  height: calc(var(--vh) * 12.5); /* 5 lines at ~2.5vh each */
+  max-height: calc(var(--vh) * 12.5);
+  min-height: calc(var(--vh) * 12.5);
+  resize: none;
+  border: none;
+  background: transparent;
+  font-size: calc(var(--vh) * 3);
+  color: #1f2937;
+  font-family: inherit;
+  font-weight: 400;
+  text-align: center;
+  outline: none;
+  box-shadow: none;
+  padding: 0;
+}
+.action-field-90:focus {
+  outline: none;
+  border: none;
+}
+}
+.action-clue-field:focus {
+  outline: none;
+  border: none;
+}
+}
+.action-answer-field:focus {
+  outline: none;
+  border: none;
+}
+}
+.action-field-90:focus {
+  outline: none;
+  border: none;
+}
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  background: #fff;
+  border: none;
+  width: 90vw;
+  max-width: 90vw;
+  display: block;
+  margin: 0 auto calc(var(--vh) * 2) auto; /* Only bottom margin retained */
+  padding: 0 calc(var(--vw) * 2) calc(var(--vh) * 2) calc(var(--vw) * 2);
+  font-size: calc(var(--vh) * 3);
+  color: #1f2937;
+  border-radius: 0;
+  box-shadow: none;
+  text-align: center;
+}
 :root {
   /* Responsive units: 1vw = 1% viewport width, 1vh = 1% viewport height */
   --vw: calc(100vw / 100);
@@ -45,18 +160,8 @@ position: relative;
   justify-content: center;
   font-size: calc(var(--vw) * 2);
   font-weight: bold;
+  position: relative;
 }
-  .header-field {
-    flex: 1;
-    text-align: center;
-    font-size: calc(var(--vw) * 4);
-    /* Responsive font size, twice the header */
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-  }
 .skeleton-content {
   flex: 1;
   display: flex;
@@ -70,21 +175,6 @@ position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 100%;
-}
-.footer-field {
-  flex: 1;
-  text-align: center;
-  font-size: calc(var(--vw) * 4);
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  outline: none;
   height: 100%;
 }
 .footer-field:active, .footer-field:focus {
@@ -325,4 +415,45 @@ position: relative;
   text-align: center;
   z-index: 10; /* higher layer than the doughnut chart */
   pointer-events: none; /* allows mouse events to pass through to chart */
+}
+
+/* Popup menu styling */
+.skeleton-footer {
+  position: relative; /* needed for absolute positioning of menus */
+}
+
+.popup-menu {
+  position: absolute;
+  bottom: 100%; /* position directly above footer */
+  background: white;
+  border: none;
+  border-radius: calc(var(--vh) * 2);
+  box-shadow: 0 calc(var(--vh) * 1) calc(var(--vh) * 4) rgba(0,0,0,0.15);
+  display: none;
+  z-index: 1000;
+  min-width: calc(var(--vw) * 25);
+  margin-bottom: calc(var(--vh) * 1);
+  overflow: hidden;
+}
+
+.popup-menu.show {
+  display: block;
+}
+
+.menu-item {
+  padding: calc(var(--vh) * 2.5) calc(var(--vw) * 4);
+  cursor: pointer;
+  font-size: calc(var(--vh) * 2.5);
+  color: #333;
+  font-weight: 400;
+  background: white;
+  border: none;
+  text-align: left;
+  width: 100%;
+  transition: background-color 0.2s ease;
+}
+
+.menu-item:hover {
+  background-color: #f8f9fa;
+  color: #000;
 }
