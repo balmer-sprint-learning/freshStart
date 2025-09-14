@@ -287,10 +287,10 @@ function updateH1WithMode() {
   const h1Field = document.querySelector('.header-field:first-child');
   
   if (h1Field) {
-    if (mode) {
+    if (typeof mode !== 'undefined' && mode) {
       h1Field.textContent = mode;
     } else {
-      h1Field.textContent = 'h1'; // fallback to default
+      h1Field.textContent = 'home'; // fallback to default
     }
   }
 }

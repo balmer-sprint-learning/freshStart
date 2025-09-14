@@ -4,6 +4,8 @@
 let currentItems = [];
 let sessionCompleted = 0; // Track how many items completed this session
 let itemDisplayStart = null; // Track when current item was first displayed
+let sessionStartTime = Date.now(); // Track when this session started
+let totalDailyTime = 0; // Track total time spent today
 
 // Build currentItems array based on mode
 async function buildCurrentItems(modeParam = null, debug = false) {
@@ -380,6 +382,7 @@ function removeCurrentItem(deleteFromStorage = false) {
   // Increment session progress
   sessionCompleted++;
   updateH2WithProgress();
+  updateH3WithTime();
   
   console.log(`Removed item ${currentItemId} from currentItems. Remaining: ${currentItems.length}`);
   
@@ -456,6 +459,7 @@ function removeFromImprovesStorage(itemId) {
 function incrementSessionProgress() {
   // This function is no longer needed as removeCurrentItem handles the progress
   updateH2WithProgress();
+  updateH3WithTime();
 }
 
 // Load and display the current item from curriculum
@@ -674,11 +678,29 @@ function clearActionFields() {
 function updateH2WithProgress() {
   const h2Field = document.querySelector('.header-field:nth-child(2)');
   
-  if (h2Field && typeof mode !== 'undefined' && mode === 'improve') {
+  if (h2Field) {
     const remaining = currentItems.length - sessionCompleted;
     h2Field.textContent = `${sessionCompleted}/${currentItems.length}`;
-  } else if (h2Field) {
-    h2Field.textContent = 'h2'; // fallback to default
+  }
+}
+
+function updateH3WithTime() {
+  const h3Field = document.querySelector('.header-field:nth-child(3)');
+  
+  if (h3Field) {
+    // Calculate session time (time since mode changed / page loaded)
+    const sessionTime = Math.floor((Date.now() - sessionStartTime) / 1000); // in seconds
+    
+    // Total daily time is session time + any previous time today
+    const totalTime = sessionTime + totalDailyTime;
+    
+    // Format times as minutes only (no seconds)
+    const formatTime = (seconds) => {
+      const mins = Math.floor(seconds / 60);
+      return `${mins}m`;
+    };
+    
+    h3Field.textContent = `${formatTime(sessionTime)}/${formatTime(totalTime)}`;
   }
 }
 function updateButtonLabels(label1, label2, label3) {
@@ -988,12 +1010,16 @@ document.addEventListener('DOMContentLoaded', async function() {
       
       // Update H2 header field with session progress after loading items
       updateH2WithProgress();
+      updateH3WithTime();
       
       // Load and display the first item
       await loadCurrentItem();
       
       // Load recent events for development display
       await loadRecentEvents();
+      
+      // Start timer to update h3 time display every second
+      setInterval(updateH3WithTime, 1000);
     } catch (error) {
       console.error(`Error loading items for mode ${mode}:`, error);
     }
