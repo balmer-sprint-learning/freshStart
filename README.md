@@ -1,18 +1,30 @@
 # FreshStart App - Claude AI Context Document
 
 ## Project Overview
-A responsive single-page web application with three main screens: Profile, Start (analytics), and Action (Q&A interface). Built with modern web standards and clean architecture.
+A responsive single-page web application with three main screens: Profile, Start (analytics), and Action (Q&A interface). Built with modern web standards, clean architecture, and robust IndexedDB persistence.
 
 ## Current Architecture
 
 ### File Structure
 ```
-├── index.html          # Main HTML structure containing all screens
-├── styles.css          # All styling centralized here
-├── general.js          # Shared utilities and navigation
-├── profile.js          # Profile screen functionality
-├── start.js           # Chart/analytics screen functionality
+├── index.html          # Redirect to start.html
+├── profile.html        # Profile screen with license/prefix generation
+├── start.html          # Chart/analytics screen
+├── action.html         # Q&A interface screen
+├── profile.css         # Profile-specific styling
+├── start.css          # Start screen styling  
+├── action.css         # Action screen styling
+├── general.css        # Shared styling
+├── general.js         # Shared utilities, navigation, and sync triggers
+├── profile.js         # Profile functionality with localStorage integration
+├── start.js           # Chart/analytics functionality
 ├── action.js          # Q&A interface functionality
+├── dataManager.js     # TSV parsing and data analytics
+├── syncManager.js     # IndexedDB persistence layer
+├── data/              # TSV data files including curriculum.tsv
+├── BEHAVIOR_REGISTRY.md    # Development best practices
+├── VARIABLES_REGISTRY.md   # Global variables documentation
+├── INDEXEDDB_SYNC_DOCS.md  # Persistence system documentation
 └── README.md          # This context document
 ```
 
@@ -320,3 +332,14 @@ This method creates a feedback loop where each session improves on the previous 
 | `themes` | Object | Screen background colors | All | Maps F1/F2/F3 to CSS values |
 | `retentionChart` | Chart.js | Chart instance reference | Start | Global for updates/manipulation |
 | `dataManager` | DataManager | Global data handling instance | All | TSV parsing and analytics with timing |
+| `syncManager` | SyncManager | IndexedDB persistence manager | All | Auto-syncs on mode/page changes |
+
+### Storage & Persistence
+| Component | Purpose | Capacity | Performance |
+|-----------|---------|----------|-------------|
+| **localStorage** | Primary cache for fast access | ~5-10MB | <1ms read/write |
+| **IndexedDB** | Persistent storage across sessions | ~50MB+ | 50-200ms sync |
+| **File Export** | Backup fallback when IndexedDB fails | Unlimited | User-initiated |
+
+**Sync Triggers**: Mode changes, page navigation, browser close
+**Documentation**: See `INDEXEDDB_SYNC_DOCS.md` for complete persistence details

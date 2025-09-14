@@ -230,6 +230,14 @@ async function showVocabMenu() {
         console.log('🎯 Menu item selected:', selectedItem);
         mode = selectedItem;
         localStorage.setItem('mode', mode);
+        // Trigger sync on mode change
+        if (window.syncManager) {
+          window.syncManager.onModeChange();
+        }
+        // Trigger sync on page change
+        if (window.syncManager) {
+          window.syncManager.onPageChange();
+        }
         window.location.href = 'action.html';
       }
     );
@@ -252,6 +260,14 @@ async function showFluencyMenu() {
     (selectedItem) => {
       mode = selectedItem;
       localStorage.setItem('mode', mode);
+      // Trigger sync on mode change
+      if (window.syncManager) {
+        window.syncManager.onModeChange();
+      }
+      // Trigger sync on page change
+      if (window.syncManager) {
+        window.syncManager.onPageChange();
+      }
       window.location.href = 'action.html';
     }
   );
@@ -269,6 +285,14 @@ async function showOtherMenu() {
     (selectedItem) => {
       mode = selectedItem;
       localStorage.setItem('mode', mode);
+      // Trigger sync on mode change
+      if (window.syncManager) {
+        window.syncManager.onModeChange();
+      }
+      // Trigger sync on page change
+      if (window.syncManager) {
+        window.syncManager.onPageChange();
+      }
       window.location.href = 'profile.html';
     }
   );

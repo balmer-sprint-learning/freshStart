@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sync Triggers Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 10px; border: 1px solid #ccc; }
+        .log { background: #f5f5f5; padding: 10px; max-height: 300px; overflow-y: auto; }
+        button { margin: 5px; padding: 10px 15px; }
+    </style>
+    <script src="dataManager.js"></script>
+    <script src="syncManager.js"></script>
+    <script src="general.js"></script>
+</head>
+<body>
+    <h1>Optimized IndexedDB Sync System Test</h1>
+    
+    <div class="test-section">
+        <h3>1. Learning Data Sync (Action Page Focus)</h3>
+        <button onclick="testLearningDataSync()">Test Learning Data Sync</button>
+        <p>This tests sync after learning events (main use case)</p>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. Mode Change to Action Sync</h3>
+        <button onclick="testModeChange()">Test Mode Change Sync</button>
+        <p>This tests sync before entering action page</p>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. Browser Close Test</h3>
+        <button onclick="testBrowserClose()">Test Browser Close Sync</button>
+        <p>This tests the beforeunload trigger (close this tab after clicking)</p>
+    </div>
+    
+    <div class="test-section">
+        <h3>4. Manual Sync Test</h3>
+        <button onclick="testManualSync()">Test Manual Sync</button>
+        <p>This tests direct syncManager.sync() call</p>
+    </div>
+    
+    <div class="test-section">
+        <h3>5. Export Data Test</h3>
+        <button onclick="testExportData()">Test Data Export</button>
+        <p>This tests the fallback file export functionality</p>
+    </div>
+    
+    <div class="test-section">
+        <h3>Sync Log</h3>
+        <div id="syncLog" class="log"></div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <script>
+        // Override console.log to capture sync events
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const logDiv = document.getElementById('syncLog');
+            if (logDiv) {
+                const timestamp = new Date().toLocaleTimeString();
+                logDiv.innerHTML += `[${timestamp}] ${args.join(' ')}<br>`;
+                logDiv.scrollTop = logDiv.scrollHeight;
+            }
+        };
+
+        function clearLog() {
+            document.getElementById('syncLog').innerHTML = '';
+        }
+
+        async function testLearningDataSync() {
+            console.log('Testing learning data sync (primary use case)...');
+            // Simulate learning data being saved
+            const testEvents = localStorage.getItem('events') || '';
+            const newEvent = '1234\timprove\tnew\t5\t1\ta';
+            localStorage.setItem('events', testEvents + '\n' + newEvent);
+            
+            const startTime = performance.now();
+            await syncManager.sync();
+            const endTime = performance.now();
+            console.log(`Learning data sync completed in ${(endTime - startTime).toFixed(2)}ms`);
+        }
+
+        async function testModeChange() {
+            console.log('Testing mode change sync (before action page)...');
+            await syncManager.onModeChange('vocab');
+            console.log('Mode change sync completed');
+        }
+
+        async function testBrowserClose() {
+            console.log('Testing browser close sync...');
+            await syncManager.onBrowserClose();
+            console.log('Browser close sync completed - close this tab to test beforeunload');
+        }
+
+        async function testManualSync() {
+            console.log('Testing manual sync...');
+            const startTime = performance.now();
+            await syncManager.sync();
+            const endTime = performance.now();
+            console.log(`Manual sync completed in ${(endTime - startTime).toFixed(2)}ms`);
+        }
+
+        async function testExportData() {
+            console.log('Testing data export...');
+            try {
+                await syncManager.exportDataToFile();
+                console.log('Data export completed');
+            } catch (error) {
+                console.log('Data export error:', error.message);
+            }
+        }
+
+        // Initialize test data
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('Optimized Sync System Test initialized');
+            console.log('Sync focuses on: Learning data changes + Mode changes to action page');
+            console.log('Available sync methods:', Object.getOwnPropertyNames(syncManager));
+            
+            // Create some test data in localStorage
+            const testProfile = {
+                nickname: 'TestUser',
+                license: 'TEST-123-4567-TIER1-DEFAULT-DEFAULT',
+                prefix: 'TEST-202412-1234567890-ABC123'
+            };
+            localStorage.setItem('profile', JSON.stringify(testProfile));
+            console.log('Test profile data created in localStorage');
+        });
+    </script>
+</body>
+</html>
