@@ -501,22 +501,26 @@ function displayCurrentItem(item) {
   const questionField = document.getElementById('action-question');
   const clueField = document.getElementById('action-clue');
   const answerField = document.getElementById('action-answer');
+  const infoField = document.getElementById('info');
   
   if (questionField) questionField.value = item.question || '';
   if (clueField) clueField.value = item.clue || '';
   
-  // Start with completely blank answer field
+  // Start with completely blank answer and info fields
   if (answerField) {
     answerField.value = '';
+  }
+  if (infoField) {
+    infoField.value = '';
   }
   
   // Determine delay based on mode
   let delay;
   if (typeof mode !== 'undefined') {
     if (mode === 'improve') {
-      delay = 6000; // 6 seconds for improve mode
+      delay = 4000; // 4 seconds for improve mode
     } else if (mode === 'learn') {
-      delay = 2000; // 2 seconds for learn mode
+      delay = 1000; // 1 second for learn mode
     } else {
       delay = 3000; // 3 seconds for other modes
     }
@@ -539,6 +543,20 @@ function displayCurrentItem(item) {
       }, 50);
       
       console.log(`Answer revealed: "${item.answer}"`);
+    }
+    
+    // Show info field content at the same time as answer
+    if (infoField) {
+      infoField.style.opacity = '0';
+      infoField.value = item.info || '';
+      infoField.style.transition = 'opacity 1s ease';
+      
+      // Fade in the text
+      setTimeout(() => {
+        infoField.style.opacity = '1';
+      }, 50);
+      
+      console.log(`Info revealed: "${item.info}"`);
     }
   }, delay);
   
