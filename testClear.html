@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Clear All Data</title>
+</head>
+<body>
+    <h1>Test Clear All Data</h1>
+    <button onclick="testClearAndCheck()">Clear All Data and Check Results</button>
+    <div id="output"></div>
+
+    <script src="syncManager.js"></script>
+    <script>
+        async function testClearAndCheck() {
+            const output = document.getElementById('output');
+            output.innerHTML = '<h2>Testing clearAllData() with verification...</h2>';
+            
+            // First, add some test data
+            localStorage.setItem('userData', 'ID\tNRD\tLEVEL\n1\t\t0\n2\t\t5\n3\t\t10');
+            localStorage.setItem('settings', 'nickname\tTestUser\nlicence\tTest-Test-Test-T1');
+            localStorage.setItem('events', 'ID\tTYPE\tRESULT\tDURATION\n1\treview\t1\t30');
+            
+            output.innerHTML += '<p>✅ Added test data to localStorage</p>';
+            
+            // Sync to IndexedDB first
+            if (window.syncManager) {
+                await window.syncManager.syncData();
+                output.innerHTML += '<p>✅ Synced test data to IndexedDB</p>';
+            }
+            
+            // Show before state
+            output.innerHTML += '<h3>BEFORE clearAllData():</h3>';
+            output.innerHTML += '<p><strong>localStorage userData length:</strong> ' + (localStorage.getItem('userData') || 'null').length + ' chars</p>';
+            output.innerHTML += '<p><strong>localStorage total items:</strong> ' + localStorage.length + '</p>';
+            
+            // Now run clearAllData with verification
+            output.innerHTML += '<h3>Running clearAllData() with built-in verification...</h3>';
+            
+            try {
+                // Clear localStorage first
+                localStorage.clear();
+                output.innerHTML += '<p>✅ localStorage.clear() completed</p>';
+                
+                // Then clear IndexedDB with verification alert
+                if (window.syncManager && window.syncManager.clearAllData) {
+                    await window.syncManager.clearAllData();
+                    output.innerHTML += '<p>✅ syncManager.clearAllData() completed - check alert!</p>';
+                } else {
+                    output.innerHTML += '<p>❌ syncManager.clearAllData() not available</p>';
+                }
+            } catch (error) {
+                output.innerHTML += '<p>❌ clearAllData() failed: ' + error.message + '</p>';
+            }
+            
+            // Show final state
+            output.innerHTML += '<h3>Final verification:</h3>';
+            output.innerHTML += '<p><strong>localStorage length:</strong> ' + localStorage.length + '</p>';
+            output.innerHTML += '<p><strong>localStorage userData:</strong> ' + (localStorage.getItem('userData') || 'null') + '</p>';
+        }
+        
+        async function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('FreshStartDB', 1);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    const stores = ['userData', 'improves', 'events', 'curriculum'];
+                    stores.forEach(storeName => {
+                        if (!db.objectStoreNames.contains(storeName)) {
+                            db.createObjectStore(storeName, { keyPath: 'id' });
+                        }
+                    });
+                };
+            });
+        }
+        
+        async function getFromDB(db, storeName) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([storeName], 'readonly');
+                const store = transaction.objectStore(storeName);
+                const request = store.get('current');
+                
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+    </script>
+</body>
+</html>

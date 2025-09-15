@@ -2,66 +2,146 @@
 
 let retentionChart = null;
 
-// Find nickname from settings.tsv
+// Find nickname from settings in localStorage, with default fallback
 async function findNickname() {
-    const settings = await dataManager.loadSettings();
-    return settings ? settings.nickname : null;
+    const settingsContent = localStorage.getItem('settings');
+    if (!settingsContent) return ''; // Empty default
+    
+    const lines = settingsContent.split(/\r\n|\r|\n/);
+    for (const line of lines) {
+        if (line.trim() && !line.startsWith('#')) {
+            const columns = line.split('\t');
+            if (columns.length >= 2 && columns[0].trim() === 'nickname') {
+                return columns[1].trim();
+            }
+        }
+    }
+    return ''; // Empty default
 }
 
-// Calculate sprint day from settings startDate
+// Calculate sprint day from settings startDate in localStorage, with default fallback
 async function calculateSprintDay() {
-    const settings = await dataManager.loadSettings();
-    if (!settings || !settings.startDate) return null;
+    const settingsContent = localStorage.getItem('settings');
+    if (!settingsContent) return 0; // Default: DAY 0
+    
+    const lines = settingsContent.split(/\r\n|\r|\n/);
+    let startDate = null;
+    
+    for (const line of lines) {
+        if (line.trim() && !line.startsWith('#')) {
+            const columns = line.split('\t');
+            if (columns.length >= 2 && columns[0].trim() === 'startDate') {
+                startDate = columns[1].trim();
+                break;
+            }
+        }
+    }
+    
+    if (!startDate) return 0; // Default: DAY 0
     
     const today = new Date();
-    const start = new Date(settings.startDate);
+    const start = new Date(startDate);
     const diffTime = today - start;
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     
     return diffDays + 1;
 }
 
-// Calculate total time spent from events duration column
+// Calculate total time spent from events duration column in localStorage, with default fallback
 async function calculateTotalTime() {
-    const events = await dataManager.loadEventsData();
-    if (!events) return null;
+    const eventsContent = localStorage.getItem('events');
+    if (!eventsContent) return ''; // Empty default
     
-    const totalSeconds = events.reduce((sum, event) => {
-        const cappedDuration = Math.min(event.duration, 60);
-        return sum + cappedDuration;
-    }, 0);
+    const lines = eventsContent.split(/\r\n|\r|\n/);
+    let totalSeconds = 0;
+    
+    for (const line of lines) {
+        if (line.trim() && !line.startsWith('#') && !line.includes('ID\t')) {
+            const columns = line.split('\t');
+            if (columns.length >= 4) {
+                const duration = parseInt(columns[3]);
+                if (!isNaN(duration)) {
+                    const cappedDuration = Math.min(duration, 60);
+                    totalSeconds += cappedDuration;
+                }
+            }
+        }
+    }
+    
+    if (totalSeconds === 0) return ''; // Empty if no time logged
+    
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     
     return `${hours}h ${minutes}m`;
 }
 
-// Get learn counts from userData based on level
+// Get learn counts from userData in localStorage based on level
 async function getLearnCountsFromUserData() {
-    const userData = await dataManager.loadUserData();
-    if (!userData) return null;
+    const userDataContent = localStorage.getItem('userData');
+    if (!userDataContent) return null;
     
+    const lines = userDataContent.split(/\r\n|\r|\n/);
     const counts = { new: 0, familiar: 0, known: 0 };
     
-    userData.forEach(user => {
-        if (user.level < 5) {
-            counts.new += 1;
-        } else if (user.level >= 5 && user.level < 10) {
-            counts.familiar += 1;
-        } else if (user.level >= 10) {
-            counts.known += 1;
+    // Debug: Track level distribution
+    const levelDistribution = {};
+    let totalItems = 0;
+    
+    for (const line of lines) {
+        if (line.trim() && !line.startsWith('#') && !line.includes('ID\t')) {
+            const columns = line.split('\t');
+            if (columns.length >= 3) {
+                const level = parseInt(columns[2]);
+                if (!isNaN(level)) {
+                    totalItems++;
+                    levelDistribution[level] = (levelDistribution[level] || 0) + 1;
+                    
+                    // FIXED: Level 0 = not yet learned (doesn't count as new/familiar/known)
+                    // Only count items that have been learned (level > 0)
+                    if (level >= 1 && level < 5) {
+                        counts.new += 1;
+                    } else if (level >= 5 && level < 10) {
+                        counts.familiar += 1;
+                    } else if (level >= 10) {
+                        counts.known += 1;
+                    }
+                    // Level 0 items are ignored - they contribute to "remaining"
+                }
+            }
         }
-    });
+    }
+    
+    // Debug output
+    console.log('📊 UserData Analysis:');
+    console.log('Total items:', totalItems);
+    console.log('Level distribution:', levelDistribution);
+    console.log('Counts:', counts);
     
     return counts;
 }
 
-// Calculate learns remaining based on license tier minus already learned
+// Calculate learns remaining based on license tier minus already learned from localStorage
 async function learnsRemaining() {
-    const settings = await dataManager.loadSettings();
-    if (!settings || !settings.licence) return null;
+    const settingsContent = localStorage.getItem('settings');
+    if (!settingsContent) return 750; // Default T1 tier for new users
     
-    const licenceParts = settings.licence.split('-');
+    const lines = settingsContent.split(/\r\n|\r|\n/);
+    let licence = null;
+    
+    for (const line of lines) {
+        if (line.trim() && !line.startsWith('#')) {
+            const columns = line.split('\t');
+            if (columns.length >= 2 && columns[0].trim() === 'licence') {
+                licence = columns[1].trim();
+                break;
+            }
+        }
+    }
+    
+    if (!licence) return 750; // Default T1 tier for new users
+    
+    const licenceParts = licence.split('-');
     if (licenceParts.length < 4) return null;
     
     const tier = licenceParts[3];
@@ -76,26 +156,39 @@ async function learnsRemaining() {
     if (!totalForTier) return null;
     
     const counts = await getLearnCountsFromUserData();
-    if (!counts) return null;
+    if (!counts) return 750; // Default T1 tier for new users
     
     const alreadyLearned = counts.new + counts.familiar + counts.known;
     return totalForTier - alreadyLearned;
 }
 
-// Calculate retention percentage from last 200 review events
+// Calculate retention percentage from last 200 review events in localStorage
 async function calculateRetentionPercentage() {
-    const events = await dataManager.loadEventsData();
-    if (!events) return null;
+    const eventsContent = localStorage.getItem('events');
+    if (!eventsContent) return null;
     
-    // Filter for review actions and get last 200
-    const reviewEvents = events.filter(event => event.action.toLowerCase() === 'review');
-    const last200Reviews = reviewEvents.slice(-200); // Get last 200 entries
+    const lines = eventsContent.split(/\r\n|\r|\n/);
+    const reviewEvents = [];
+    
+    for (const line of lines) {
+        if (line.trim() && !line.startsWith('#') && !line.includes('ID\t')) {
+            const columns = line.split('\t');
+            if (columns.length >= 3 && columns[1].trim().toLowerCase() === 'review') {
+                reviewEvents.push({
+                    result: parseFloat(columns[2])
+                });
+            }
+        }
+    }
+    
+    // Get last 200 entries
+    const last200Reviews = reviewEvents.slice(-200);
     
     if (last200Reviews.length === 0) return null;
     
     // Sum the results (0, 0.5, or 1) and count rows
     const sum = last200Reviews.reduce((total, event) => {
-        const result = parseFloat(event.result);
+        const result = event.result;
         return total + (isNaN(result) ? 0 : result);
     }, 0);
     
@@ -109,11 +202,7 @@ async function updateH1WithNickname() {
     const h1Field = document.querySelector('.header-field:first-child');
     
     if (h1Field) {
-        if (nickname) {
-            h1Field.textContent = nickname;
-        } else {
-            h1Field.textContent = 'h1'; // fallback to default
-        }
+        h1Field.textContent = nickname; // Will be 'nickname' default or actual nickname
     }
 }
 
@@ -123,10 +212,10 @@ async function updateH2WithSprintDay() {
     const h2Field = document.querySelector('.header-field:nth-child(2)');
     
     if (h2Field) {
-        if (sprintDay) {
-            h2Field.textContent = sprintDay;
+        if (sprintDay === 0) {
+            h2Field.textContent = ''; // Empty when no data
         } else {
-            h2Field.textContent = 'h2'; // fallback to default
+            h2Field.textContent = `Day ${sprintDay}`;
         }
     }
 }
@@ -137,57 +226,19 @@ async function updateH3WithTotalTime() {
     const h3Field = document.querySelector('.header-field:nth-child(3)');
     
     if (h3Field) {
-        if (totalTime) {
-            h3Field.textContent = totalTime;
-        } else {
-            h3Field.textContent = 'h3'; // fallback to default
-        }
+        h3Field.textContent = totalTime; // Will be '0h 0m' default or actual time
     }
 }
 
 // Initialize the doughnut chart with real data
 async function initializeChart() {
   const ctx = document.getElementById('retentionChart');
-  if (!ctx) {
-    console.log('❌ Chart canvas not found');
-    return;
-  }
   
-  console.log('📊 Initializing chart...');
+  // Get counts - convert null to zeros
+  const counts = await getLearnCountsFromUserData() || { new: 0, familiar: 0, known: 0 };
+  const remaining = await learnsRemaining() || 750;
   
-  // Get real data from our functions with fallbacks
-  let counts, remaining, retentionPercentage;
-  
-  try {
-    counts = await getLearnCountsFromUserData();
-    remaining = await learnsRemaining();
-    retentionPercentage = await calculateRetentionPercentage();
-    
-    console.log('📊 Chart data:', { counts, remaining, retentionPercentage });
-    
-    // Use fallback data if real data isn't available
-    if (!counts) {
-      console.log('⚠️ Using fallback counts data');
-      counts = { new: 10, familiar: 20, known: 30 };
-    }
-    if (remaining === null) {
-      console.log('⚠️ Using fallback remaining data');
-      remaining = 100;
-    }
-    if (retentionPercentage === null) {
-      console.log('⚠️ Using fallback retention percentage');
-      retentionPercentage = 87;
-    }
-  } catch (error) {
-    console.log('❌ Error loading chart data:', error);
-    // Use fallback data
-    counts = { new: 10, familiar: 20, known: 30 };
-    remaining = 100;
-    retentionPercentage = 87;
-  }
-  
-  console.log('📊 Creating Chart.js instance...');
-  
+  // Create chart with actual data
   retentionChart = new Chart(ctx.getContext('2d'), {
     type: 'doughnut',
     data: {
@@ -218,55 +269,65 @@ async function initializeChart() {
     }
   });
   
-  console.log('✅ Chart created successfully:', retentionChart);
-  
-  // Update center text with real retention percentage
-  if (retentionPercentage !== null) {
-    updateCenterText(retentionPercentage);
-  }
-}
-
-// Update chart data
-function updateChartData(newData) {
-  if (retentionChart && newData && newData.length === 4) {
-    retentionChart.data.datasets[0].data = newData;
-    retentionChart.update();
-  }
-}
-
-// Update the center percentage text
-function updateCenterText(percentage) {
+  // Update center text with retention percentage
+  const retentionPercentage = await calculateRetentionPercentage();
   const centerText = document.querySelector('.chart-center-text');
-  if (centerText) {
-    centerText.textContent = percentage + '%';
-  }
-}
-
-// Calculate percentage from chart data
-function calculatePercentage() {
-  if (retentionChart) {
-    const data = retentionChart.data.datasets[0].data;
-    const total = data.reduce((sum, value) => sum + value, 0);
-    const percentage = Math.round((data[0] / total) * 100);
-    updateCenterText(percentage);
-  }
+  centerText.textContent = (typeof retentionPercentage === 'number' && retentionPercentage > 0) ? retentionPercentage + '%' : '';
+  
+  // Update chart data with current values
+  retentionChart.data.datasets[0].data = [counts.known, counts.familiar, counts.new, remaining];
+  retentionChart.update();
 }
 
 // Initialize start screen functionality
 document.addEventListener('DOMContentLoaded', async function() {
   console.log('🚀 Start page DOMContentLoaded');
   
-  // Check if Chart.js is loaded
-  if (typeof Chart !== 'undefined') {
-    console.log('📊 Chart.js is available, initializing chart...');
-    try {
-      await initializeChart();
-      console.log('✅ Chart initialized successfully');
-    } catch (error) {
-      console.log('❌ Chart initialization failed:', error);
-    }
+  // Load data from IndexedDB to localStorage for this session
+  console.log('🔄 Loading data from IndexedDB to localStorage...');
+  
+  // Check if we just completed fresh start setup
+  const freshStartComplete = localStorage.getItem('freshStartComplete');
+  if (freshStartComplete === 'true') {
+    console.log('🆕 Fresh start detected - skipping IndexedDB restore');
+    localStorage.removeItem('freshStartComplete'); // Clear flag
   } else {
-    console.log('❌ Chart.js not loaded');
+    try {
+      // Use syncManager to restore from IndexedDB to localStorage
+      if (typeof syncManager !== 'undefined' && syncManager.restoreFromIndexedDB) {
+        await syncManager.restoreFromIndexedDB();
+        console.log('✅ Data restored from IndexedDB to localStorage');
+      } else {
+        console.log('⚠️ syncManager not available, checking localStorage directly');
+      }
+    } catch (error) {
+      console.error('❌ Error restoring from IndexedDB:', error);
+    }
+  }
+  
+  // Show userData count alert
+  const userDataContent = localStorage.getItem('userData');
+  let userDataCount = 0;
+  
+  if (userDataContent) {
+    const lines = userDataContent.split(/\r\n|\r|\n/);
+    // Count non-header, non-empty lines
+    userDataCount = lines.filter(line => 
+      line.trim() && 
+      !line.startsWith('#') && 
+      !line.includes('ID\t')
+    ).length;
+  }
+  
+  alert(`📊 Start Page Loaded\n\nUserData items in localStorage: ${userDataCount}\n\n${userDataCount === 0 ? '✅ Fresh start - no items learned yet' : '📈 ' + userDataCount + ' items in progress'}`);
+  
+  // Initialize chart
+  console.log('📊 Initializing chart...');
+  try {
+    await initializeChart();
+    console.log('✅ Chart initialized successfully');
+  } catch (error) {
+    console.log('❌ Chart initialization failed:', error);
   }
   
   // Update header fields

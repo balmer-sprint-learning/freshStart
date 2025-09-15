@@ -157,6 +157,44 @@ async function saveProfileToStorage() {
   alert('Setting up your profile and downloading curriculum...');
   
   try {
+    // STEP 1: COMPLETE WIPE - Clear everything first
+    console.log('🗑️ WIPING ALL DATA - Fresh Start...');
+    console.log('Debug: window.syncManager =', window.syncManager);
+    console.log('Debug: typeof window.syncManager =', typeof window.syncManager);
+    if (window.syncManager) {
+      console.log('Debug: window.syncManager.clearAllData =', window.syncManager.clearAllData);
+      console.log('Debug: typeof window.syncManager.clearAllData =', typeof window.syncManager.clearAllData);
+    }
+    
+    // Clear localStorage completely
+    localStorage.clear();
+    
+    // Clear IndexedDB completely
+    if (window.syncManager && window.syncManager.clearAllData) {
+      await window.syncManager.clearAllData();
+    } else {
+      // Fallback: manually delete IndexedDB if syncManager not available
+      console.log('⚠️ syncManager not available, manually deleting IndexedDB...');
+      await new Promise((resolve, reject) => {
+        const deleteRequest = indexedDB.deleteDatabase('FreshStartDB');
+        deleteRequest.onsuccess = () => {
+          console.log('✅ IndexedDB manually deleted');
+          resolve();
+        };
+        deleteRequest.onerror = () => {
+          console.warn('⚠️ IndexedDB deletion failed, continuing anyway');
+          resolve(); // Continue even if it fails
+        };
+        deleteRequest.onblocked = () => {
+          console.warn('⚠️ IndexedDB deletion blocked, continuing anyway');
+          setTimeout(resolve, 1000);
+        };
+      });
+    }
+    
+    console.log('✅ All data wiped clean');
+    
+    // STEP 2: CREATE FRESH DATA
     const profileData = {
       nickname: nickname,
       licence: licence,
@@ -170,30 +208,50 @@ async function saveProfileToStorage() {
     console.log('Downloading curriculum from Dropbox...');
     const curriculum = await downloadCurriculum();
     
-    // Generate initial userData structure based on userData.tsv format
+    // Generate initial userData structure for fresh start
     const userData = generateInitialUserData();
     
     // Generate initial improves structure (starts empty)
     const improves = generateInitialImproves();
     
-    // Save all data to localStorage
+    // Generate initial events structure (starts empty)
+    const events = generateInitialEvents();
+    
+    // Create settings data from profile
+    const settings = generateSettingsFromProfile(profileData);
+    
+    // Save all data to localStorage with keys that syncManager expects
+    localStorage.setItem('settings', settings);
+    localStorage.setItem('userData', convertUserDataToTSV(userData));
+    localStorage.setItem('improves', convertImprovesToTSV(improves));
+    localStorage.setItem('events', convertEventsToTSV(events));
+    localStorage.setItem('curriculum', convertCurriculumToTSV(curriculum));
+    
+    // Also save profile separately for profile page
     localStorage.setItem('freshStartProfile', JSON.stringify(profileData));
-    localStorage.setItem('freshStartUserData', JSON.stringify(userData));
-    localStorage.setItem('freshStartImproves', JSON.stringify(improves));
-    localStorage.setItem('freshStartCurriculum', JSON.stringify(curriculum));
     
     // Show the stored data for verification
     console.log('Profile saved to localStorage:');
-    console.log('Profile:', JSON.stringify(profileData, null, 2));
+    console.log('Settings TSV created');
     console.log('UserData entries:', userData.data.length);
     console.log('Improves entries:', improves.data.length);
+    console.log('Events entries:', events.data.length);
     console.log('Curriculum entries:', curriculum.data.length);
     
-    // Display success message
-    alert(`✅ Setup Complete!\n\nSaved:\n- Profile data\n- UserData (${userData.data.length} entries)\n- Improves (${improves.data.length} entries)\n- Curriculum (${curriculum.data.length} entries)`);
+    // Trigger sync to IndexedDB before navigating away
+    if (window.syncManager) {
+      console.log('🔄 Triggering sync to IndexedDB...');
+      await window.syncManager.syncData();
+      console.log('✅ Data synced to IndexedDB');
+    }
     
-    // Could navigate to start screen here
-    // showScreen('f1');
+    // Display success message
+    alert(`✅ Setup Complete!\n\nSaved:\n- Settings data\n- UserData (${userData.data.length} entries)\n- Improves (${improves.data.length} entries)\n- Events (${events.data.length} entries)\n- Curriculum (${curriculum.data.length} entries)`);
+    
+    // Navigate to start screen
+    // Set flag to prevent start page from restoring old data
+    localStorage.setItem('freshStartComplete', 'true');
+    window.location.href = 'start.html';
     
   } catch (error) {
     console.error('Error during setup:', error);
@@ -315,7 +373,7 @@ async function parseCurriculumTSV(tsvContent) {
   }
 }
 
-// Generate initial userData structure based on userData.tsv format
+// Generate initial userData structure for fresh start
 function generateInitialUserData() {
   const userData = {
     metadata: {
@@ -327,12 +385,12 @@ function generateInitialUserData() {
   };
   
   // Generate initial entries (1-3000) for production
-  // All items start fresh: NRD blank, LEVEL 0
+  // All items start fresh: NRD blank, LEVEL 0 (not yet learned)
   for (let i = 1; i <= 3000; i++) {
     userData.data.push({
       ID: i,
       NRD: "",  // Blank for new users
-      LEVEL: 0  // All start at level 0 (need to learn)
+      LEVEL: 0  // All start at level 0 (not yet learned)
     });
   }
   
@@ -437,4 +495,102 @@ function loadExistingProfile() {
       console.error('Error loading profile from localStorage:', error);
     }
   }
+}
+
+// Generate initial events structure (starts empty)
+function generateInitialEvents() {
+  const events = {
+    metadata: {
+      headerRow: 5,
+      description: "Action: improve | review | Learn | conjugate | listen | compose | errors; Result: new | familiar | known | 0 | 0.5 | 1",
+      created: new Date().toISOString()
+    },
+    data: []
+  };
+  
+  // Starts empty - events will be added as user progresses
+  
+  return events;
+}
+
+// Generate settings TSV from profile data
+function generateSettingsFromProfile(profileData) {
+  const settingsLines = [
+    "# Settings for FreshStart app",
+    "# Key-value pairs",
+    "KEY\tVALUE",
+    `nickname\t${profileData.nickname}`,
+    `licence\t${profileData.licence}`,
+    `version\t${profileData.version}`,
+    `prefix\t${profileData.prefix}`,
+    `startDate\t${profileData.startDate}`,
+    `created\t${profileData.created}`
+  ];
+  
+  return settingsLines.join('\n');
+}
+
+// Convert userData JSON to TSV format
+function convertUserDataToTSV(userData) {
+  const lines = [
+    "# headerRow = 3",
+    "# NRD = NextReviewDate in terms of sprintDay",
+    "ID\tNRD\tLEVEL"
+  ];
+  
+  userData.data.forEach(item => {
+    lines.push(`${item.ID}\t${item.NRD}\t${item.LEVEL}`);
+  });
+  
+  return lines.join('\n');
+}
+
+// Convert improves JSON to TSV format
+function convertImprovesToTSV(improves) {
+  const lines = [
+    "# headerRow = 2",
+    "ID"
+  ];
+  
+  improves.data.forEach(item => {
+    lines.push(`${item.ID}`);
+  });
+  
+  return lines.join('\n');
+}
+
+// Convert events JSON to TSV format
+function convertEventsToTSV(events) {
+  const lines = [
+    "# headerRow = 5",
+    "# Action: improve | review | Learn | conjugate | listen | compose | errors",
+    "#  Result: new | familiar | known | 0 | 0.5 | 1",
+    "#  sDay: sprintDay ; A/P: active | passive ; warning: starting row = 5 is fixed",
+    "ID\tACTION\tRESULT\tDURATION\tSDAY\tA/P"
+  ];
+  
+  events.data.forEach(item => {
+    lines.push(`${item.ID}\t${item.ACTION}\t${item.RESULT}\t${item.DURATION}\t${item.SDAY}\t${item.AP}`);
+  });
+  
+  return lines.join('\n');
+}
+
+// Convert curriculum JSON to TSV format
+function convertCurriculumToTSV(curriculum) {
+  const lines = [
+    "# headerRow = 7",
+    "# Curriculum data with questions, clues, answers, and info",
+    "# ID\tQUESTION\tCLUE\tANSWER\tINFO\tEXTRA1\tEXTRA2",
+    "# Questions and answers should be concise",
+    "# Clue should be brief hint or context",
+    "# Info should provide additional learning context",
+    "ID\tQUESTION\tCLUE\tANSWER\tINFO\tEXTRA1\tEXTRA2"
+  ];
+  
+  curriculum.data.forEach(item => {
+    lines.push(`${item.ID}\t${item.QUESTION || ''}\t${item.CLUE || ''}\t${item.ANSWER || ''}\t${item.INFO || ''}\t${item.EXTRA1 || ''}\t${item.EXTRA2 || ''}`);
+  });
+  
+  return lines.join('\n');
 }

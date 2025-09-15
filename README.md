@@ -1,5 +1,53 @@
 # FreshStart App - Claude AI Context Document
 
+## FIRST USE AND ONLOAD
+
+### New User Flow Architecture
+
+**Initial State Check:**
+1. **New user downloads the app** - localStorage is empty and IndexedDB is empty
+2. **System automatically redirects to profile page** (because no data exists)
+3. **If IndexedDB had data** - user would be taken to start page instead
+
+**Profile Page Setup:**
+1. **User fills out form** on profile page (nickname, etc.)
+2. **User presses "Start" button** - This CREATES:
+   - `userData` data structure
+   - `settings` data structure  
+   - Empty shell for `improves` data
+   - Empty shell for `events` data
+3. **Page change trigger fires** - As soon as they leave profile page, localStorage is automatically saved to IndexedDB
+4. **On second visit** - User starts at start page (because IndexedDB now has data)
+
+**Production Behavior:**
+- When "Start" button is pressed, it will also **download the curriculum file** directly into IndexedDB
+- **No local files will exist** - files are temporary for development only
+- Files are temporary measure for development and importing existing information
+
+**App Load Sequence:**
+1. **Check IndexedDB** - Look for existing user data
+2. **Move IndexedDB to localStorage** (caching for performance)  
+3. **Every page change** - Update IndexedDB from localStorage
+4. **If IndexedDB and localStorage are empty** - Use default values
+
+**Default Values for Empty Start Page:**
+- **H1** = "nickname" (or fallback text)
+- **H2** = "DAY 0" 
+- **H3** = "0h 0m"
+
+**Data Flow Pattern:**
+```
+New User: Profile Page → localStorage → IndexedDB
+Returning User: IndexedDB → localStorage → Start Page
+Always: Page Changes → localStorage → IndexedDB (sync)
+```
+
+**File Development Note:**
+- Current files in `/data/` folder are temporary for development
+- In production, curriculum will be downloaded directly to IndexedDB
+- Files allow importing existing development data into the app
+- No file system dependencies in final production version
+
 ## Project Overview
 A responsive single-page web application with three main screens: Profile, Start (analytics), and Action (Q&A interface). Built with modern web standards, clean architecture, and robust IndexedDB persistence.
 

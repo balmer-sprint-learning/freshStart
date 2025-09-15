@@ -21,6 +21,7 @@
 | `itemDisplayStart` | timestamp | When current item was first displayed | Memory only |
 | `sessionStartTime` | timestamp | When current session started | Memory only |
 | `totalDailyTime` | number | Total time spent today | Memory only |
+| `formatUnderscoreText` | function | Format text with underscore-delimited styling for display elements | Memory only |
 
 ### dataManager.js
 | Variable | Type | Purpose | Persistence |

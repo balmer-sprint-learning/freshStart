@@ -54,8 +54,14 @@ async function buildCurrentItems(modeParam = null, debug = false) {
         }
       }
       
+      // Shuffle the improve items using Fisher-Yates algorithm for proper randomization
+      for (let i = currentItems.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [currentItems[i], currentItems[j]] = [currentItems[j], currentItems[i]];
+      }
+      
       debugLog.push(`Processed ${processedLines} data lines`);
-      debugLog.push(`Loaded ${currentItems.length} improve items: ${currentItems.slice(0, 5).join(', ')}${currentItems.length > 5 ? '...' : ''}`);
+      debugLog.push(`Loaded ${currentItems.length} improve items (shuffled): ${currentItems.slice(0, 5).join(', ')}${currentItems.length > 5 ? '...' : ''}`);
       
     } catch (error) {
       debugLog.push(`Error building currentItems: ${error.message}`);
@@ -241,8 +247,14 @@ async function buildCurrentItems(modeParam = null, debug = false) {
         debugLog.push(`No items found for theme "${targetTheme}"`);
         // Return empty list if no matches
       } else {
+        // Shuffle items using Fisher-Yates algorithm for proper randomization
+        const shuffled = [...matchingItems];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        
         // Get 10 random items (or all if less than 10)
-        const shuffled = [...matchingItems].sort(() => 0.5 - Math.random());
         const selectedItems = shuffled.slice(0, 10);
         
         // Extract IDs
@@ -507,15 +519,15 @@ function displayCurrentItem(item) {
   const answerField = document.getElementById('action-answer');
   const infoField = document.getElementById('info');
   
-  if (questionField) questionField.value = item.question || '';
-  if (clueField) clueField.value = item.clue || '';
+  if (questionField) questionField.innerHTML = formatUnderscoreText(item.question || '');
+  if (clueField) clueField.innerHTML = formatUnderscoreText(item.clue || '');
   
   // Start with completely blank answer and info fields
   if (answerField) {
-    answerField.value = '';
+    answerField.innerHTML = '';
   }
   if (infoField) {
-    infoField.value = '';
+    infoField.innerHTML = '';
   }
   
   // Determine delay based on mode
@@ -538,7 +550,7 @@ function displayCurrentItem(item) {
   setTimeout(() => {
     if (answerField) {
       answerField.style.opacity = '0';
-      answerField.value = item.answer || '';
+      answerField.innerHTML = formatUnderscoreText(item.answer || '');
       answerField.style.transition = 'opacity 1s ease';
       
       // Fade in the text
@@ -672,8 +684,8 @@ function clearActionFields() {
   const answerField = document.getElementById('action-answer');
   
   if (questionField) questionField.value = '';
-  if (clueField) clueField.value = '';
-  if (answerField) answerField.value = '';
+  if (clueField) clueField.innerHTML = '';
+  if (answerField) answerField.innerHTML = '';
 }
 function updateH2WithProgress() {
   const h2Field = document.querySelector('.header-field:nth-child(2)');
@@ -871,111 +883,7 @@ async function saveEventsToFile(content) {
   return response.json();
 }
 
-// Debug function to check userData loading and learnsRemaining calculation
-async function debugUserDataAndLearnsRemaining() {
-  const debugInfo = [];
-  
-  try {
-    // 1. Check raw userData file
-    debugInfo.push("=== DEBUGGING USERDATA AND LEARNS REMAINING ===");
-    
-    // Load raw file content
-    const response = await fetch('data/userData.tsv');
-    const rawContent = await response.text();
-    const rawLines = rawContent.split(/\r\n|\r|\n/);
-    
-    // Count level 0 items in raw file
-    let rawLevel0Count = 0;
-    let totalRawItems = 0;
-    
-    for (let i = 4; i < rawLines.length; i++) { // Skip header rows
-      const line = rawLines[i].trim();
-      if (line && !line.startsWith('#')) {
-        const columns = line.split('\t');
-        if (columns.length >= 3) {
-          totalRawItems++;
-          const level = parseInt(columns[2].trim());
-          if (level === 0) {
-            rawLevel0Count++;
-          }
-        }
-      }
-    }
-    
-    debugInfo.push(`1. RAW FILE CHECK:`);
-    debugInfo.push(`   - Total items in raw file: ${totalRawItems}`);
-    debugInfo.push(`   - Level 0 items in raw file: ${rawLevel0Count}`);
-    debugInfo.push(`   - Raw file shows unlearned items: ${rawLevel0Count > 0 ? 'YES' : 'NO'}`);
-    
-    // 2. Check localStorage content
-    const storageContent = localStorage.getItem('userData');
-    if (!storageContent) {
-      debugInfo.push(`2. LOCALSTORAGE CHECK: NO DATA FOUND`);
-    } else {
-      const storageLines = storageContent.split(/\r\n|\r|\n/);
-      let storageLevel0Count = 0;
-      let totalStorageItems = 0;
-      
-      for (let i = 4; i < storageLines.length; i++) { // Skip header rows
-        const line = storageLines[i].trim();
-        if (line && !line.startsWith('#')) {
-          const columns = line.split('\t');
-          if (columns.length >= 3) {
-            totalStorageItems++;
-            const level = parseInt(columns[2].trim());
-            if (level === 0) {
-              storageLevel0Count++;
-            }
-          }
-        }
-      }
-      
-      debugInfo.push(`2. LOCALSTORAGE CHECK:`);
-      debugInfo.push(`   - Total items in localStorage: ${totalStorageItems}`);
-      debugInfo.push(`   - Level 0 items in localStorage: ${storageLevel0Count}`);
-      debugInfo.push(`   - localStorage shows unlearned items: ${storageLevel0Count > 0 ? 'YES' : 'NO'}`);
-    }
-    
-    // 3. Check dataManager.loadUserData()
-    const userData = await dataManager.loadUserData();
-    if (!userData) {
-      debugInfo.push(`3. DATAMANAGER CHECK: NO DATA RETURNED`);
-    } else {
-      let dataManagerLevel0Count = 0;
-      userData.forEach(user => {
-        if (user.level === 0) {
-          dataManagerLevel0Count++;
-        }
-      });
-      
-      debugInfo.push(`3. DATAMANAGER CHECK:`);
-      debugInfo.push(`   - Total items from dataManager: ${userData.length}`);
-      debugInfo.push(`   - Level 0 items from dataManager: ${dataManagerLevel0Count}`);
-      debugInfo.push(`   - DataManager shows unlearned items: ${dataManagerLevel0Count > 0 ? 'YES' : 'NO'}`);
-    }
-    
-    // 4. Check learnsRemaining() function from general.js
-    if (typeof learnsRemaining === 'function') {
-      const remaining = await learnsRemaining();
-      debugInfo.push(`4. LEARNSREMAINING() RESULT: ${remaining}`);
-    } else {
-      debugInfo.push(`4. LEARNSREMAINING() FUNCTION: NOT AVAILABLE`);
-    }
-    
-  } catch (error) {
-    debugInfo.push(`ERROR IN DEBUG: ${error.message}`);
-  }
-  
-  // Display in events area
-  const eventsDiv = document.getElementById('events');
-  if (eventsDiv) {
-    eventsDiv.innerHTML = '<pre style="font-family: monospace; font-size: 12px; white-space: pre-wrap;">' + 
-                         debugInfo.join('\n') + '</pre>';
-  }
-  
-  // Also log to console
-  console.log(debugInfo.join('\n'));
-}
+// Debug function removed - no longer fetching from TSV files
 
 // DOMContentLoaded event handler
 document.addEventListener('DOMContentLoaded', async function() {
@@ -989,17 +897,22 @@ document.addEventListener('DOMContentLoaded', async function() {
   try {
     await dataManager.loadAllToStorage();
     console.log('✅ Data files loaded to localStorage');
-    
-    // Debug userData loading and learnsRemaining calculation
-    await debugUserDataAndLearnsRemaining();
   } catch (error) {
     console.error('❌ Error loading data files:', error);
   }
+  
+  // Show diagnostic alert with all required data
+  await showDiagnosticAlert();
   
   handleActionForm();
   handleActionButtons();
   setActionButtonLabelsByMode();
   observeActionScreen();
+  
+  // Update header with current mode
+  if (typeof updateH1WithMode === 'function') {
+    updateH1WithMode();
+  }
   
   // Auto-load currentItems based on mode when page loads
   if (typeof mode !== 'undefined' && mode) {
@@ -1025,3 +938,107 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
   }
 });
+
+// Format text with underscore-delimited styling
+// Converts text like "Hello _world_ and _beautiful_ day" to HTML with styled underscored words
+function formatUnderscoreText(text, color = '#0066ff') {
+  // Validate input parameters
+  if (typeof text !== 'string') {
+    console.warn('formatUnderscoreText: text parameter must be a string');
+    return '';
+  }
+  
+  if (typeof color !== 'string') {
+    console.warn('formatUnderscoreText: color parameter must be a string, using default blue');
+    color = '#0066ff';
+  }
+  
+  // Use regex to find text between underscores and replace with styled HTML
+  // Pattern: matches _content_ only at word boundaries (space or start/end of string)
+  const styledText = text.replace(/(\s|^)_(.+?)_(\s|$)/g, (match, spaceBefore, content, spaceAfter) => {
+    return `${spaceBefore}<span style="font-weight: bold; color: ${color};">${content}</span>${spaceAfter}`;
+  });
+  
+  return styledText;
+}
+
+// Show diagnostic alert with all data needed to understand why items aren't being presented
+async function showDiagnosticAlert() {
+  let message = "🔍 ACTION PAGE DIAGNOSTIC\n\n";
+  
+  // 1. Curriculum count
+  const curriculumContent = localStorage.getItem('curriculum');
+  if (curriculumContent) {
+    const curriculumLines = curriculumContent.split(/\r\n|\r|\n/);
+    const curriculumCount = curriculumLines.filter(line => 
+      line.trim() && 
+      !line.startsWith('#') && 
+      !line.includes('ID\t')
+    ).length;
+    message += `📚 Curriculum items: ${curriculumCount}\n\n`;
+  } else {
+    message += "❌ Curriculum: NOT FOUND\n\n";
+  }
+  
+  // 2. Settings data
+  const settingsContent = localStorage.getItem('settings');
+  if (settingsContent) {
+    message += "⚙️ Settings data:\n";
+    const settingsLines = settingsContent.split(/\r\n|\r|\n/);
+    settingsLines.forEach(line => {
+      if (line.trim() && !line.startsWith('#')) {
+        message += `  ${line}\n`;
+      }
+    });
+    message += "\n";
+  } else {
+    message += "❌ Settings: NOT FOUND\n\n";
+  }
+  
+  // 3. First 10 rows of userData
+  const userDataContent = localStorage.getItem('userData');
+  if (userDataContent) {
+    const userDataLines = userDataContent.split(/\r\n|\r|\n/);
+    const dataRows = userDataLines.filter(line => 
+      line.trim() && 
+      !line.startsWith('#') && 
+      !line.includes('ID\t')
+    );
+    
+    message += `👤 UserData (first 10 of ${dataRows.length} total):\n`;
+    message += "ID\tNRD\tLEVEL\n";
+    
+    for (let i = 0; i < Math.min(10, dataRows.length); i++) {
+      message += `${dataRows[i]}\n`;
+    }
+    message += "\n";
+    
+    // 4. Analysis of why first item isn't being presented
+    if (dataRows.length > 0) {
+      const firstRow = dataRows[0].split('\t');
+      const firstID = firstRow[0];
+      const firstNRD = firstRow[1];
+      const firstLevel = parseInt(firstRow[2]);
+      
+      message += "🔎 FIRST ITEM ANALYSIS:\n";
+      message += `ID: ${firstID}\n`;
+      message += `NRD: '${firstNRD}' ${firstNRD === '' ? '(empty - ready to learn)' : '(has next review date)'}\n`;
+      message += `LEVEL: ${firstLevel} ${firstLevel === 0 ? '(new item - never learned)' : '(partially learned)'}\n\n`;
+      
+      if (firstLevel === 0 && firstNRD === '') {
+        message += "✅ VERDICT: First item should be available for learning\n";
+        message += "If not showing, check currentItems array or loadCurrentItem() function";
+      } else if (firstNRD !== '') {
+        message += "⏰ VERDICT: First item has review date - not ready for new learning";
+      } else {
+        message += "❓ VERDICT: Unexpected state - needs investigation";
+      }
+    } else {
+      message += "❌ VERDICT: No userData rows found - nothing to learn";
+    }
+  } else {
+    message += "❌ UserData: NOT FOUND\n\nVERDICT: No user progress data available";
+  }
+  
+  alert(message);
+}

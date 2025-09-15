@@ -142,9 +142,13 @@ body {
   color: rgb(25,25,25);
   padding: calc(var(--vh) * 1);
   height: calc(9 * var(--vh));
-  resize: none;
-  overflow: hidden;
   margin-bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  word-wrap: break-word;
+  white-space: pre-wrap;
 }
 
 #action-clue {
@@ -159,6 +163,12 @@ body {
   padding: calc(var(--vh) * 1);
   height: calc(3 * var(--vh));
   margin-bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  word-wrap: break-word;
+  white-space: pre-wrap;
 }
 
 #action-answer {
@@ -172,9 +182,13 @@ body {
   color: rgb(25,25,25);
   padding: calc(var(--vh) * 1);
   height: calc(9 * var(--vh));
-  resize: none;
-  overflow: hidden;
   margin-bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  word-wrap: break-word;
+  white-space: pre-wrap;
 }
 
 .action-buttons {
