@@ -6,27 +6,6 @@ class NewUser {
         
     }
 
-    async clearAllStorage() {
-        // Clear localStorage completely
-        localStorage.clear();
-        
-        // Sync the empty localStorage TO IndexedDB (clearing IndexedDB)
-        if (typeof syncManager !== 'undefined' && syncManager.syncData) {
-            await syncManager.syncData();
-        }
-        
-        // Verify both storages are empty
-        const localStorageEmpty = localStorage.length === 0;
-        const indexedDBEmpty = true; // Should be empty after syncing empty localStorage
-        
-        // Show result alert
-        if (localStorageEmpty && indexedDBEmpty) {
-            alert('✅ Storage is empty');
-        } else {
-            alert('❌ Storage not empty');
-        }
-    }
-
     async saveSettingsData() {
         // Get form data
         const nickname = document.getElementById('nickname')?.value || '';
@@ -34,9 +13,9 @@ class NewUser {
         const version = document.getElementById('version')?.value || '';
         const prefix = document.getElementById('prefix')?.value || '';
         
-        // Generate start date in database format (YYYY-MM-DD)
-        const now = new Date();
-        const startDate = now.toISOString().split('T')[0]; // Gets YYYY-MM-DD format
+      
+      
+      
         
         // Create settings TSV format
         const settingsLines = [
