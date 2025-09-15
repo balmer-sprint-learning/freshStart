@@ -48,7 +48,7 @@ async function buildCurrentItems(modeParam = null, debug = false) {
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         if (line && !line.startsWith('#') && i !== headerRowIndex) {
-          // For improves.tsv, each line is just an ID
+          // For improves data, each line is just an ID
           currentItems.push(line);
           processedLines++;
         }
@@ -231,10 +231,10 @@ async function buildCurrentItems(modeParam = null, debug = false) {
       
       debugLog.push(`Looking for curriculum items with theme: ${targetTheme}`);
       
-      // Get curriculum data
+      // Use existing dataManager to load curriculum properly
       const curriculum = await dataManager.loadCurriculum();
       if (!curriculum) {
-        throw new Error('Curriculum data not found');
+        throw new Error('Curriculum data not found in localStorage');
       }
       
       debugLog.push(`Curriculum loaded: ${curriculum.length} items`);
@@ -486,10 +486,10 @@ async function loadCurrentItem() {
   console.log(`Loading curriculum item for ID: ${currentItemId}`);
   
   try {
-    // Use the proper dataManager to get curriculum objects
+    // Use existing dataManager to load curriculum properly
     const curriculum = await dataManager.loadCurriculum();
     if (!curriculum) {
-      throw new Error('Curriculum data not found');
+      throw new Error('Curriculum data not found in localStorage');
     }
     
     console.log(`Curriculum loaded: ${curriculum.length} items`);
@@ -782,11 +782,25 @@ function observeActionScreen() {
 // Calculate current sprint day (moved outside DOMContentLoaded for global access)
 async function calculateSprintDay() {
   try {
-    const settings = await dataManager.loadSettings();
-    if (!settings || !settings.startDate) return null;
+    const settingsContent = localStorage.getItem('settings');
+    if (!settingsContent) return null;
+    
+    let startDate = null;
+    const lines = settingsContent.split(/\r\n|\r|\n/);
+    for (const line of lines) {
+      if (line.includes('startDate')) {
+        const parts = line.split('\t');
+        if (parts.length > 1) {
+          startDate = parts[1];
+          break;
+        }
+      }
+    }
+    
+    if (!startDate) return null;
     
     const today = new Date();
-    const start = new Date(settings.startDate);
+    const start = new Date(startDate);
     const diffTime = today - start;
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     
@@ -871,7 +885,7 @@ async function saveEventsToFile(content) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      filename: 'events.tsv',
+      filename: 'events_data',
       content: content
     })
   });
@@ -892,14 +906,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.body.classList.remove('preload');
   }, 100);
   
-  // Load all data files to localStorage first
-  console.log('🔄 Loading data files to localStorage...');
-  try {
-    await dataManager.loadAllToStorage();
-    console.log('✅ Data files loaded to localStorage');
-  } catch (error) {
-    console.error('❌ Error loading data files:', error);
-  }
+  // Data should already be in localStorage from profile.js fresh start
+  console.log('📊 Using data from localStorage...');
   
   // Show diagnostic alert with all required data
   await showDiagnosticAlert();
@@ -909,9 +917,10 @@ document.addEventListener('DOMContentLoaded', async function() {
   setActionButtonLabelsByMode();
   observeActionScreen();
   
-  // Update header with current mode
-  if (typeof updateH1WithMode === 'function') {
-    updateH1WithMode();
+  // Update header with "Home"
+  const h1Field = document.querySelector('.header-field:first-child');
+  if (h1Field) {
+    h1Field.textContent = 'Home';
   }
   
   // Auto-load currentItems based on mode when page loads
@@ -995,7 +1004,7 @@ async function showDiagnosticAlert() {
     message += "❌ Settings: NOT FOUND\n\n";
   }
   
-  // 3. First 10 rows of userData
+  // 3. First 25 rows from localStorage based on license
   const userDataContent = localStorage.getItem('userData');
   if (userDataContent) {
     const userDataLines = userDataContent.split(/\r\n|\r|\n/);
@@ -1005,10 +1014,28 @@ async function showDiagnosticAlert() {
       !line.includes('ID\t')
     );
     
-    message += `👤 UserData (first 10 of ${dataRows.length} total):\n`;
+    // Get license from localStorage to determine how many items to show
+    const settingsContent = localStorage.getItem('settings');
+    let maxItems = 25; // default to 25
+    if (settingsContent) {
+      const settingsLines = settingsContent.split(/\r\n|\r|\n/);
+      for (const line of settingsLines) {
+        if (line.includes('licence') || line.includes('license')) {
+          const parts = line.split('\t');
+          if (parts.length > 1) {
+            const license = parts[1];
+            const lastPart = license.slice(-2); // Last 2 characters
+            maxItems = parseInt(lastPart) || 25;
+            break;
+          }
+        }
+      }
+    }
+    
+    message += `👤 UserData (first ${Math.min(maxItems, dataRows.length)} of ${dataRows.length} total, based on license):\n`;
     message += "ID\tNRD\tLEVEL\n";
     
-    for (let i = 0; i < Math.min(10, dataRows.length); i++) {
+    for (let i = 0; i < Math.min(maxItems, dataRows.length); i++) {
       message += `${dataRows[i]}\n`;
     }
     message += "\n";

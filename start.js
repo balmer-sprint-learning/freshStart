@@ -286,23 +286,16 @@ document.addEventListener('DOMContentLoaded', async function() {
   // Load data from IndexedDB to localStorage for this session
   console.log('🔄 Loading data from IndexedDB to localStorage...');
   
-  // Check if we just completed fresh start setup
-  const freshStartComplete = localStorage.getItem('freshStartComplete');
-  if (freshStartComplete === 'true') {
-    console.log('🆕 Fresh start detected - skipping IndexedDB restore');
-    localStorage.removeItem('freshStartComplete'); // Clear flag
-  } else {
-    try {
-      // Use syncManager to restore from IndexedDB to localStorage
-      if (typeof syncManager !== 'undefined' && syncManager.restoreFromIndexedDB) {
-        await syncManager.restoreFromIndexedDB();
-        console.log('✅ Data restored from IndexedDB to localStorage');
-      } else {
-        console.log('⚠️ syncManager not available, checking localStorage directly');
-      }
-    } catch (error) {
-      console.error('❌ Error restoring from IndexedDB:', error);
+  try {
+    // Use syncManager to restore from IndexedDB to localStorage
+    if (typeof syncManager !== 'undefined' && syncManager.restoreFromIndexedDB) {
+      await syncManager.restoreFromIndexedDB();
+      console.log('✅ Data restored from IndexedDB to localStorage');
+    } else {
+      console.log('⚠️ syncManager not available, checking localStorage directly');
     }
+  } catch (error) {
+    console.error('❌ Error restoring from IndexedDB:', error);
   }
   
   // Show userData count alert
@@ -319,7 +312,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     ).length;
   }
   
-  alert(`📊 Start Page Loaded\n\nUserData items in localStorage: ${userDataCount}\n\n${userDataCount === 0 ? '✅ Fresh start - no items learned yet' : '📈 ' + userDataCount + ' items in progress'}`);
+  alert(`📊 Start Page Loaded\n\nUserData items in localStorage: ${userDataCount}\n\n${userDataCount === 0 ? '✅ No items learned yet' : '📈 ' + userDataCount + ' items in progress'}`);
   
   // Initialize chart
   console.log('📊 Initializing chart...');

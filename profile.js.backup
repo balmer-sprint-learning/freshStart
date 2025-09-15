@@ -8,9 +8,14 @@ class NewUser {
 
     async clearAllStorage() {
         // Clear localStorage completely
-        localStorage.clear();
-        
-        // Sync the empty localStorage TO IndexedDB (clearing IndexedDB)
+        localStorage.clear(function calculateLicense() {
+  const licenseField = document.getElementById('licence');
+  const nickname = document.getElementById('nickname')?.value || '';
+  
+  // Don't regenerate if nickname is read-only and license already exists
+  if (licenseField && licenseField.value && document.getElementById('nickname')?.readOnly) {
+    return;
+  }       // Sync the empty localStorage TO IndexedDB (clearing IndexedDB)
         if (typeof syncManager !== 'undefined' && syncManager.syncData) {
             await syncManager.syncData();
         }
@@ -210,6 +215,7 @@ function handleProfileForm() {
       // Auto-uppercase and limit to 2 characters
       e.target.value = e.target.value.toUpperCase().slice(0, 2);
       // Calculate license when nickname changes
+      console.log('Nickname changed, calling calculateLicense()');
       calculateLicense();
     });
   }
@@ -248,7 +254,7 @@ function handleProfileForm() {
   }
 }
 
-// Calculate license 
+// Calculate license and prefix values
 function calculateLicense() {
   const licenseField = document.getElementById('licence');
   const nickname = document.getElementById('nickname')?.value || '';
@@ -288,7 +294,6 @@ function calculateLicense() {
   }
 }
 
-// Calculate prefix
 function calculatePrefix() {
   const prefixField = document.getElementById('prefix');
   const nickname = document.getElementById('nickname')?.value || '';
@@ -305,44 +310,60 @@ function calculatePrefix() {
       const profileData = JSON.parse(stored);
       existingPrefix = profileData.prefix || '';
     } catch (error) {
-      console.log('Error reading stored profile:', error);
+      console.error('Error reading stored profile:', error);
     }
   }
   
-  // Don't regenerate if prefix is read-only and already has a value
-  if (prefixField.readOnly && prefixField.value) {
+  // If we have a valid existing prefix, use it and make field read-only
+  if (existingPrefix && existingPrefix.trim().length > 0) {
+    prefixField.value = existingPrefix;
+    prefixField.readOnly = true;
+    prefixField.style.backgroundColor = '#f8f9fa';
+    prefixField.style.color = '#666';
     return;
   }
   
-  // Generate prefix if we have both nickname and version
-  if (nickname.length === 2 && version.length > 0) {
-    // Use existing prefix if available, otherwise generate new one
-    if (existingPrefix) {
-      prefixField.value = existingPrefix;
-      // Make field read-only once set
-      prefixField.readOnly = true;
-      prefixField.style.backgroundColor = '#f8f9fa';
-      prefixField.style.color = '#666';
-    } else {
-      // Generate new prefix: NICKNAME-YYMM-UNIX4-RANDOM6
+  // Only calculate new prefix if we don't have one AND conditions are met
+  if (nickname.length === 2 && version.trim().length > 0) {
+    try {
+      // Generate prefix in format: NICKNAME-YYYYMM-UNIXTIME-RANDOM6
       const now = new Date();
-      const year = now.getFullYear() % 100; // e.g., 2025 -> 25
-      const month = (now.getMonth() + 1).toString().padStart(2, '0'); // 01-12
-      const yearMonth = `${year}${month}`;
+      const year = now.getFullYear();
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
       
+      // Part 2: Year (2 digits) + Month (2 digits)
+      const yearMonth = year.toString().slice(-2) + month;
+      
+      // Part 3: Unix timestamp in seconds
       const unixTime = Math.floor(now.getTime() / 1000);
-      const unix4 = unixTime.toString().substring(0, 4);
       
-      // Generate random 6-digit number
-      const random6 = Math.floor(Math.random() * 900000) + 100000; // 100000-999999
+      // Part 4: Cryptographically secure random 6-digit number
+      const randomArray = new Uint32Array(1);
+      crypto.getRandomValues(randomArray);
+      const random6 = (randomArray[0] % 1000000).toString().padStart(6, '0');
       
-      const prefix = `${nickname.toUpperCase()}-${yearMonth}-${unix4}-${random6}`;
+      const prefix = `${nickname.toUpperCase()}-${yearMonth}-${unixTime}-${random6}`;
+      
+      // Set the prefix and make it read-only permanently
       prefixField.value = prefix;
-      
-      // Make field read-only once set
       prefixField.readOnly = true;
       prefixField.style.backgroundColor = '#f8f9fa';
       prefixField.style.color = '#666';
+      
+      // Update localStorage with the new prefix
+      let profileData = {};
+      if (stored) {
+        try {
+          profileData = JSON.parse(stored);
+        } catch (error) {
+          console.error('Error parsing stored profile:', error);
+        }
+      }
+      profileData.prefix = prefix;
+      localStorage.setItem('freshStartProfile', JSON.stringify(profileData));
+      
+    } catch (error) {
+      console.error('Error generating prefix:', error);
     }
   } else {
     // Clear field if conditions not met and no existing prefix
@@ -350,7 +371,6 @@ function calculatePrefix() {
   }
 }
 
-// Initialize profile screen functionality
-document.addEventListener('DOMContentLoaded', function() {
-  handleProfileForm();
-});
+async function saveProfileToStorage() {
+  alert('Profile save function disabled - will rebuild systematically');
+}

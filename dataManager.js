@@ -25,30 +25,20 @@ class DataManager {
     }
 
     async loadAllToStorage() {
-        console.log('🔄 Loading files to localStorage...');
+        console.log('� DataManager: Data should already be in localStorage from fresh start process');
         
+        // Just check what's already in localStorage instead of fetching files
         for (const filename of this.files) {
-            try {
-                // Add cache-busting to ensure fresh data
-                const timestamp = new Date().getTime();
-                const response = await fetch(`data/${filename}.tsv?t=${timestamp}`, {
-                    cache: 'no-cache',
-                    headers: {
-                        'Cache-Control': 'no-cache, no-store, must-revalidate',
-                        'Pragma': 'no-cache',
-                        'Expires': '0'
-                    }
-                });
-                const content = await response.text();
+            const content = localStorage.getItem(filename);
+            if (content) {
                 const lineCount = content.split(/\r\n|\r|\n/).length;
-                
-                localStorage.setItem(filename, content);
-                console.log(`✅ ${filename}: ${lineCount} lines loaded`);
-                
-            } catch (error) {
-                console.log(`❌ ${filename}: ${error.message}`);
+                console.log(`✅ ${filename}: ${lineCount} lines found in localStorage`);
+            } else {
+                console.log(`⚠️ ${filename}: not found in localStorage`);
             }
         }
+        
+        console.log('📊 DataManager: Using localStorage data, no file fetching needed');
     }
 
     checkStorage() {
