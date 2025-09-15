@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test maxIDForLearnsToday</title>
+</head>
+<body>
+    <h1>Testing maxIDForLearnsToday Function</h1>
+    <div id="output"></div>
+
+    <script src="dataManager.js"></script>
+    <script>
+        async function testMaxID() {
+            try {
+                console.log('Testing maxIDForLearnsToday function...');
+                const result = await maxIDForLearnsToday();
+                
+                document.getElementById('output').innerHTML = `
+                    <h3>Result:</h3>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                `;
+                
+                console.log('maxIDForLearnsToday result:', result);
+            } catch (error) {
+                console.error('Error testing maxIDForLearnsToday:', error);
+                document.getElementById('output').innerHTML = `
+                    <h3>Error:</h3>
+                    <pre>${error.message}</pre>
+                `;
+            }
+        }
+
+        // Run test when page loads
+        window.onload = testMaxID;
+    </script>
+</body>
+</html>

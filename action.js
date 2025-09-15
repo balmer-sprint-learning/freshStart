@@ -203,15 +203,23 @@ async function buildCurrentItems(modeParam = null, debug = false) {
       // Sort by ID to ensure proper order
       validLearnItems.sort((a, b) => a.id - b.id);
       
+      // Limit to reasonable session size (e.g., 10-20 items)
+      const sessionLimit = 20; // Adjust this as needed
+      const itemsForSession = validLearnItems.slice(0, sessionLimit);
+      
       // Extract just the original ID strings
-      for (const item of validLearnItems) {
+      for (const item of itemsForSession) {
         currentItems.push(item.originalId);
       }
       
       debugLog.push(`Processed ${processedLines} data lines`);
       debugLog.push(`Found ${levelZeroLines} items with level=0`);
-      debugLog.push(`Found ${currentItems.length} valid learn items (ID <= ${maxIDForLearns})`);
+      debugLog.push(`Found ${validLearnItems.length} valid learn items (ID <= ${maxIDForLearns})`);
+      debugLog.push(`Limited to ${currentItems.length} items for this session`);
       debugLog.push(`Loaded ${currentItems.length} learn items: ${currentItems.slice(0, 5).join(', ')}${currentItems.length > 5 ? '...' : ''}`);
+      
+      console.log(`🎯 LEARN MODE SUMMARY: Processed ${processedLines} lines, found ${levelZeroLines} with level=0, ${validLearnItems.length} valid items (ID <= ${maxIDForLearns}), limited to ${currentItems.length} for session`);
+      console.log(`🎯 First 5 valid items: ${currentItems.slice(0, 5).join(', ')}`);
       
     } catch (error) {
       debugLog.push(`Error building currentItems for learn: ${error.message}`);
@@ -314,6 +322,9 @@ function handleActionButtons() {
       // Create event with appropriate result value
       const resultValue = (mode === 'learn') ? 'known' : 0;
       createEvent(resultValue).then(() => {
+        // Promote item (increment level and update NRD)
+        return promoteItem();
+      }).then(() => {
         removeCurrentItem(false);
       }).catch(error => {
         console.error('Error in button 1 handler:', error);
@@ -328,6 +339,9 @@ function handleActionButtons() {
       // Create event with appropriate result value
       const resultValue = (mode === 'learn') ? 'familiar' : 0.5;
       createEvent(resultValue).then(() => {
+        // Promote item (increment level and update NRD)
+        return promoteItem();
+      }).then(() => {
         removeCurrentItem(false);
       }).catch(error => {
         console.error('Error in button 2 handler:', error);
@@ -342,12 +356,91 @@ function handleActionButtons() {
       // Create event with appropriate result value
       const resultValue = (mode === 'learn') ? 'new' : 1;
       createEvent(resultValue).then(() => {
+        // Promote item (increment level and update NRD)
+        return promoteItem();
+      }).then(() => {
         removeCurrentItem(true);
       }).catch(error => {
         console.error('Error in button 3 handler:', error);
         removeCurrentItem(true); // Still remove item even if event creation fails
       });
     });
+  }
+}
+
+// Promote item: increment level and calculate new NRD using 2^level
+async function promoteItem() {
+  if (currentItems.length === 0) {
+    console.log('❌ Cannot promote item: no current item');
+    return;
+  }
+  
+  const itemId = currentItems[0];
+  console.log(`🎯 Promoting item: ${itemId}`);
+  
+  try {
+    // Get current sprint day
+    const sprintDay = await calculateSprintDay();
+    if (!sprintDay) {
+      console.error('❌ Could not calculate sprint day for item promotion');
+      return;
+    }
+    
+    // Get userData from localStorage
+    const content = localStorage.getItem('userData');
+    if (!content) {
+      console.error('❌ UserData not found in localStorage');
+      return;
+    }
+    
+    const lines = content.split(/\r\n|\r|\n/);
+    let headerRowIndex = null;
+    let updated = false;
+    
+    // Find header row
+    for (let i = 0; i < Math.min(10, lines.length); i++) {
+      const line = lines[i].trim();
+      if (line.includes('# headerRow =')) {
+        const match = line.match(/headerRow\s*=\s*(\d+)/);
+        if (match) {
+          headerRowIndex = parseInt(match[1]) - 1;
+          break;
+        }
+      }
+    }
+    
+    // Find and update the item
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line && !line.startsWith('#') && i !== headerRowIndex) {
+        const columns = line.split('\t');
+        if (columns.length >= 3 && columns[0].trim() === itemId) {
+          const currentLevel = parseInt(columns[2].trim()) || 0;
+          const reviewInterval = Math.pow(2, currentLevel); // 2^currentLevel
+          const newNRD = sprintDay + reviewInterval;
+          const newLevel = currentLevel + 1;
+          
+          // Update the line with new NRD and level
+          lines[i] = `${columns[0]}\t${newNRD}\t${newLevel}`;
+          updated = true;
+          
+          console.log(`✅ Promoted item ${itemId}: Level ${currentLevel} → ${newLevel}, NRD = ${sprintDay} + 2^${currentLevel} = ${newNRD}`);
+          break;
+        }
+      }
+    }
+    
+    if (updated) {
+      // Save updated content back to localStorage
+      const updatedContent = lines.join('\n');
+      localStorage.setItem('userData', updatedContent);
+      console.log(`✅ Updated userData in localStorage for item ${itemId}`);
+    } else {
+      console.log(`⚠️ Item ${itemId} not found in userData for promotion`);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error promoting item:', error);
   }
 }
 
@@ -477,8 +570,9 @@ function incrementSessionProgress() {
 // Load and display the current item from curriculum
 async function loadCurrentItem() {
   if (currentItems.length === 0) {
-    console.log('No items in currentItems to load');
-    clearActionFields();
+    console.log('No items in currentItems to load - navigating to start page');
+    // Navigate back to start page when no more items
+    window.location.href = 'start.html';
     return;
   }
   
@@ -530,6 +624,9 @@ function displayCurrentItem(item) {
     infoField.innerHTML = '';
   }
   
+  // Disable buttons until answer appears
+  disableActionButtons();
+  
   // Determine delay based on mode
   let delay;
   if (typeof mode !== 'undefined') {
@@ -564,7 +661,7 @@ function displayCurrentItem(item) {
     // Show info field content at the same time as answer
     if (infoField) {
       infoField.style.opacity = '0';
-      infoField.value = item.info || '';
+      infoField.innerHTML = formatInfoText(item.info || '');
       infoField.style.transition = 'opacity 1s ease';
       
       // Fade in the text
@@ -574,6 +671,9 @@ function displayCurrentItem(item) {
       
       console.log(`Info revealed: "${item.info}"`);
     }
+    
+    // Enable buttons when answer appears
+    enableActionButtons();
   }, delay);
   
   // Reset timer for new item display
@@ -583,7 +683,282 @@ function displayCurrentItem(item) {
   console.log(`Item display timer started at: ${new Date(itemDisplayStart).toLocaleTimeString()}`);
 }
 
-// Load and display recent events for development
+// Disable action buttons
+function disableActionButtons() {
+  const btn1 = document.getElementById('btn1');
+  const btn2 = document.getElementById('btn2');
+  const btn3 = document.getElementById('btn3');
+  
+  if (btn1) btn1.disabled = true;
+  if (btn2) btn2.disabled = true;
+  if (btn3) btn3.disabled = true;
+}
+
+// Enable action buttons
+function enableActionButtons() {
+  const btn1 = document.getElementById('btn1');
+  const btn2 = document.getElementById('btn2');
+  const btn3 = document.getElementById('btn3');
+  
+  if (btn1) btn1.disabled = false;
+  if (btn2) btn2.disabled = false;
+  if (btn3) btn3.disabled = false;
+}
+
+// Handle tab functionality
+function handleTabSwitching() {
+  const tabHeaders = document.querySelectorAll('.tab-header');
+  const tabContents = document.querySelectorAll('.tab-content');
+  
+  tabHeaders.forEach(header => {
+    header.addEventListener('click', function() {
+      const targetTab = this.getAttribute('data-tab');
+      
+      // Remove active class from all headers and contents
+      tabHeaders.forEach(h => h.classList.remove('active'));
+      tabContents.forEach(c => c.classList.remove('active'));
+      
+      // Add active class to clicked header and corresponding content
+      this.classList.add('active');
+      document.getElementById(`tab-${targetTab}`).classList.add('active');
+      
+      // Load data for the selected tab
+      if (targetTab === 'events') {
+        loadRecentEvents();
+      } else if (targetTab === 'localStorage') {
+        loadLocalStorageUserData();
+      } else if (targetTab === 'indexedDB') {
+        loadIndexedDBUserData();
+      } else if (targetTab === 'learnStats') {
+        loadLearnStats();
+      }
+    });
+  });
+}
+
+// Load and display learning stats
+async function loadLearnStats() {
+  const displayField = document.getElementById('learnStats-display');
+  if (!displayField) return;
+
+  try {
+    const settings = await dataManager.loadSettings();
+    if (!settings || !settings.licence) {
+      displayField.value = "Settings or license not found.";
+      return;
+    }
+
+    const licence = settings.licence;
+    const licenceParts = licence.split('-');
+    const tier = licenceParts.length > 3 ? licenceParts[3] : 'N/A';
+    const learnsPerDay = licenceParts.length > 5 ? parseInt(licenceParts[5]) : 0;
+
+    const sprintDay = await dataManager.getCurrentSprintDay(settings);
+
+    const userData = await dataManager.loadUserData();
+    const learnsSoFar = userData.filter(item => parseInt(item.level) > 0).length;
+
+    const maxIDResult = await maxIDForLearnsToday();
+    const maxLearnsForTier = maxIDResult.maxIDForLearns;
+
+    const maxLearnsCalculated = (sprintDay * learnsPerDay) - learnsSoFar;
+    const maxLearnsToday = Math.min(maxLearnsCalculated, maxLearnsForTier);
+
+    let statsText = `Current Tier: ${tier}\n`;
+    statsText += `Current Sprint Day: ${sprintDay}\n`;
+    statsText += `Learns Per Day (from license): ${learnsPerDay}\n`;
+    statsText += `Learns So Far: ${learnsSoFar}\n`;
+    statsText += `Max Learns Today: ${maxLearnsToday}\n`;
+
+    displayField.value = statsText;
+
+  } catch (error) {
+    console.error('Error loading learn stats:', error);
+    displayField.value = "Error loading learning stats.";
+  }
+}
+
+// Load userData from localStorage (first 100 records)
+async function loadLocalStorageUserData() {
+  try {
+    console.log('🔄 Loading localStorage userData...');
+    const content = localStorage.getItem('userData');
+    if (!content) {
+      console.log('⚠️ No userData content in localStorage');
+      updateLocalStorageDisplay('UserData count: 0\n\nNo userData found in localStorage.');
+      return;
+    }
+    
+    console.log(`📄 UserData content length: ${content.length} characters`);
+    
+    const lines = content.split(/\r\n|\r|\n/);
+    console.log(`📄 Split into ${lines.length} lines`);
+    
+    let dataLines = [];
+    let headerRowIndex = null;
+    let headerLine = '';
+    
+    // Find header row
+    for (let i = 0; i < Math.min(10, lines.length); i++) {
+      const line = lines[i].trim();
+      if (line.includes('# headerRow =')) {
+        const match = line.match(/headerRow\s*=\s*(\d+)/);
+        if (match) {
+          headerRowIndex = parseInt(match[1]) - 1;
+          console.log(`📍 Header row found at index: ${headerRowIndex}`);
+          if (headerRowIndex < lines.length) {
+            headerLine = lines[headerRowIndex];
+          }
+          break;
+        }
+      }
+    }
+    
+    // Collect data lines (skip comments and header)
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line && !line.startsWith('#') && i !== headerRowIndex) {
+        dataLines.push(lines[i]); // Keep original formatting
+        if (dataLines.length >= 100) break; // Limit to first 100
+      }
+    }
+    
+    console.log(`📊 Found ${dataLines.length} userData data lines`);
+    
+    // Format display
+    let displayText = `UserData count: ${dataLines.length} (showing first 100)\n`;
+    displayText += `Source: localStorage\n\n`;
+    
+    if (headerLine) {
+      displayText += `Header: ${headerLine}\n\n`;
+    }
+    
+    if (dataLines.length === 0) {
+      displayText += 'No userData records found.';
+    } else {
+      displayText += 'Data records:\n';
+      dataLines.forEach((record, index) => {
+        displayText += `${index + 1}. ${record}\n`;
+      });
+    }
+    
+    console.log(`📝 Display text length: ${displayText.length} characters`);
+    updateLocalStorageDisplay(displayText);
+    
+  } catch (error) {
+    console.error('❌ Error loading localStorage userData:', error);
+    updateLocalStorageDisplay('Error loading localStorage userData.');
+  }
+}
+
+// Load userData from IndexedDB (first 100 records)
+async function loadIndexedDBUserData() {
+  try {
+    console.log('🔄 Loading IndexedDB userData...');
+    updateIndexedDBDisplay('Loading IndexedDB data...');
+    
+    // Open IndexedDB connection
+    const dbRequest = indexedDB.open('FreshStartDB', 1);
+    
+    dbRequest.onerror = function(event) {
+      console.error('❌ Error opening IndexedDB:', event.target.error);
+      updateIndexedDBDisplay('Error: Could not open IndexedDB.');
+    };
+    
+    dbRequest.onsuccess = function(event) {
+      const db = event.target.result;
+      
+      // Check if userData object store exists
+      if (!db.objectStoreNames.contains('userData')) {
+        console.log('⚠️ userData object store not found in IndexedDB');
+        updateIndexedDBDisplay('UserData count: 0\n\nNo userData object store found in IndexedDB.');
+        db.close();
+        return;
+      }
+      
+      // Start transaction
+      const transaction = db.transaction(['userData'], 'readonly');
+      const objectStore = transaction.objectStore('userData');
+      
+      // Get all records (limit to first 100)
+      const getAllRequest = objectStore.getAll();
+      
+      getAllRequest.onerror = function(event) {
+        console.error('❌ Error reading from IndexedDB:', event.target.error);
+        updateIndexedDBDisplay('Error reading from IndexedDB.');
+        db.close();
+      };
+      
+      getAllRequest.onsuccess = function(event) {
+        const records = event.target.result;
+        console.log(`📊 Found ${records.length} records in IndexedDB userData`);
+        
+        // Format display
+        let displayText = `UserData count: ${records.length} (showing first 100)\n`;
+        displayText += `Source: IndexedDB\n\n`;
+        
+        if (records.length === 0) {
+          displayText += 'No userData records found in IndexedDB.';
+        } else {
+          displayText += 'Data records:\n';
+          
+          // Show first 100 records
+          const recordsToShow = records.slice(0, 100);
+          recordsToShow.forEach((record, index) => {
+            // IndexedDB stores objects, so we need to reconstruct the TSV format
+            const id = record.id || '';
+            const nrd = record.nrd || '';
+            const level = record.level || '';
+            displayText += `${index + 1}. ${id}\t${nrd}\t${level}\n`;
+          });
+          
+          if (records.length > 100) {
+            displayText += `\n... and ${records.length - 100} more records not shown`;
+          }
+        }
+        
+        console.log(`📝 IndexedDB display text length: ${displayText.length} characters`);
+        updateIndexedDBDisplay(displayText);
+        db.close();
+      };
+    };
+    
+    dbRequest.onupgradeneeded = function(event) {
+      console.log('⚠️ IndexedDB needs upgrade - database may not be initialized yet');
+      updateIndexedDBDisplay('IndexedDB database not initialized yet.\nTry refreshing the page or triggering a sync.');
+    };
+    
+  } catch (error) {
+    console.error('❌ Error loading IndexedDB userData:', error);
+    updateIndexedDBDisplay('Error loading IndexedDB userData.');
+  }
+}
+
+// Update the localStorage display field
+function updateLocalStorageDisplay(text) {
+  console.log(`📺 Updating localStorage display with: "${text.substring(0, 100)}..."`);
+  const localStorageField = document.getElementById('localStorage-display');
+  if (localStorageField) {
+    localStorageField.value = text;
+    localStorageField.scrollTop = 0; // Scroll to top
+    console.log('✅ localStorage display updated successfully');
+  } else {
+    console.log('❌ localStorage display field not found!');
+  }
+}
+
+// Update the IndexedDB display field
+function updateIndexedDBDisplay(text) {
+  console.log(`📺 Updating IndexedDB display with: "${text.substring(0, 100)}..."`);
+  const indexedDBField = document.getElementById('indexedDB-display');
+  if (indexedDBField) {
+    indexedDBField.value = text;
+    indexedDBField.scrollTop = 0; // Scroll to top
+    console.log('✅ IndexedDB display updated successfully');
+  } else {
+    console.log('❌ IndexedDB display field not found!');
+  }
+}
 async function loadRecentEvents() {
   try {
     console.log('🔄 Loading recent events...');
@@ -688,31 +1063,41 @@ function clearActionFields() {
   if (answerField) answerField.innerHTML = '';
 }
 function updateH2WithProgress() {
-  const h2Field = document.querySelector('.header-field:nth-child(2)');
+  const h2Field = document.getElementById('action-h2');
   
   if (h2Field) {
-    const remaining = currentItems.length - sessionCompleted;
-    h2Field.textContent = `${sessionCompleted}/${currentItems.length}`;
+    // Only show progress if we have items loaded
+    if (currentItems.length > 0) {
+      h2Field.textContent = `${sessionCompleted}/${currentItems.length}`;
+    } else {
+      h2Field.textContent = ''; // Clear if no items
+    }
+  } else {
+    console.error('action-h2 element not found');
   }
 }
 
 function updateH3WithTime() {
-  const h3Field = document.querySelector('.header-field:nth-child(3)');
+  const h3Field = document.getElementById('action-h3');
   
   if (h3Field) {
-    // Calculate session time (time since mode changed / page loaded)
-    const sessionTime = Math.floor((Date.now() - sessionStartTime) / 1000); // in seconds
-    
-    // Total daily time is session time + any previous time today
-    const totalTime = sessionTime + totalDailyTime;
-    
-    // Format times as minutes only (no seconds)
-    const formatTime = (seconds) => {
-      const mins = Math.floor(seconds / 60);
-      return `${mins}m`;
-    };
-    
-    h3Field.textContent = `${formatTime(sessionTime)}/${formatTime(totalTime)}`;
+    // Only show time if we have started a session (have items)
+    if (currentItems.length > 0) {
+      // Calculate session time (time since mode changed / page loaded)
+      const sessionTime = Math.floor((Date.now() - sessionStartTime) / 1000); // in seconds
+      
+      // Format time as minutes only (no seconds)
+      const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        return `${mins}m`;
+      };
+      
+      h3Field.textContent = formatTime(sessionTime);
+    } else {
+      h3Field.textContent = ''; // Clear if no session active
+    }
+  } else {
+    console.error('action-h3 element not found');
   }
 }
 function updateButtonLabels(label1, label2, label3) {
@@ -899,6 +1284,223 @@ async function saveEventsToFile(content) {
 
 // Debug function removed - no longer fetching from TSV files
 
+// Sync localStorage from IndexedDB on page load
+async function syncFromIndexedDB() {
+  try {
+    console.log('🔄 Syncing from IndexedDB to localStorage...');
+    
+    // Open IndexedDB connection
+    const dbRequest = indexedDB.open('FreshStartDB', 1);
+    
+    return new Promise((resolve, reject) => {
+      dbRequest.onerror = function(event) {
+        console.log('⚠️ IndexedDB not available, using existing localStorage data');
+        resolve(false);
+      };
+      
+      dbRequest.onsuccess = function(event) {
+        const db = event.target.result;
+        
+        // Check if userData object store exists
+        if (!db.objectStoreNames.contains('userData')) {
+          console.log('⚠️ userData object store not found, using existing localStorage data');
+          db.close();
+          resolve(false);
+          return;
+        }
+        
+        // Start transaction to read userData
+        const transaction = db.transaction(['userData'], 'readonly');
+        const objectStore = transaction.objectStore('userData');
+        
+        // Get all records
+        const getAllRequest = objectStore.getAll();
+        
+        getAllRequest.onerror = function(event) {
+          console.log('⚠️ Error reading from IndexedDB, using existing localStorage data');
+          db.close();
+          resolve(false);
+        };
+        
+        getAllRequest.onsuccess = function(event) {
+          const records = event.target.result;
+          
+          if (records.length > 0) {
+            console.log(`📥 Found ${records.length} userData records in IndexedDB`);
+            
+            // Convert records back to TSV format
+            let tsvContent = `# headerRow = 2\n# ID	NRD	LEVEL\nID	NRD	LEVEL\n`;
+            
+            // Sort records by ID to maintain order
+            records.sort((a, b) => {
+              const idA = parseInt(a.id) || 0;
+              const idB = parseInt(b.id) || 0;
+              return idA - idB;
+            });
+            
+            records.forEach(record => {
+              tsvContent += `${record.id}\t${record.nrd}\t${record.level}\n`;
+            });
+            
+            // Update localStorage with synced data
+            localStorage.setItem('userData', tsvContent);
+            console.log('✅ Synced userData from IndexedDB to localStorage');
+          } else {
+            console.log('📭 No userData records in IndexedDB, keeping localStorage data');
+          }
+          
+          db.close();
+          resolve(true);
+        };
+      };
+      
+      dbRequest.onupgradeneeded = function(event) {
+        console.log('💡 IndexedDB needs initialization, using existing localStorage data');
+        resolve(false);
+      };
+    });
+    
+  } catch (error) {
+    console.error('❌ Error syncing from IndexedDB:', error);
+    return false;
+  }
+}
+
+// Sync localStorage to IndexedDB on page unload
+async function syncToIndexedDB() {
+  try {
+    console.log('💾 Syncing from localStorage to IndexedDB...');
+    
+    // Get userData from localStorage
+    const content = localStorage.getItem('userData');
+    if (!content) {
+      console.log('⚠️ No userData in localStorage to sync');
+      return false;
+    }
+    
+    const lines = content.split(/\r\n|\r|\n/);
+    let headerRowIndex = null;
+    const records = [];
+    
+    // Find header row
+    for (let i = 0; i < Math.min(10, lines.length); i++) {
+      const line = lines[i].trim();
+      if (line.includes('# headerRow =')) {
+        const match = line.match(/headerRow\s*=\s*(\d+)/);
+        if (match) {
+          headerRowIndex = parseInt(match[1]) - 1;
+          break;
+        }
+      }
+    }
+    
+    // Parse data lines
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line && !line.startsWith('#') && i !== headerRowIndex) {
+        const columns = line.split('\t');
+        if (columns.length >= 3) {
+          records.push({
+            id: columns[0].trim(),
+            nrd: columns[1].trim(),
+            level: parseInt(columns[2].trim()) || 0
+          });
+        }
+      }
+    }
+    
+    if (records.length === 0) {
+      console.log('⚠️ No userData records to sync');
+      return false;
+    }
+    
+    // Open IndexedDB connection
+    const dbRequest = indexedDB.open('FreshStartDB', 1);
+    
+    return new Promise((resolve, reject) => {
+      dbRequest.onerror = function(event) {
+        console.error('❌ Error opening IndexedDB for sync:', event.target.error);
+        resolve(false);
+      };
+      
+      dbRequest.onsuccess = function(event) {
+        const db = event.target.result;
+        
+        // Start transaction to write userData
+        const transaction = db.transaction(['userData'], 'readwrite');
+        const objectStore = transaction.objectStore('userData');
+        
+        // Clear existing data and add new records
+        objectStore.clear().onsuccess = function() {
+          console.log(`📤 Syncing ${records.length} userData records to IndexedDB`);
+          
+          let completed = 0;
+          records.forEach(record => {
+            const addRequest = objectStore.add(record);
+            addRequest.onsuccess = function() {
+              completed++;
+              if (completed === records.length) {
+                console.log('✅ Successfully synced userData to IndexedDB');
+                db.close();
+                resolve(true);
+              }
+            };
+            addRequest.onerror = function() {
+              console.error('❌ Error adding record to IndexedDB:', record);
+              completed++;
+              if (completed === records.length) {
+                db.close();
+                resolve(false);
+              }
+            };
+          });
+        };
+        
+        transaction.onerror = function(event) {
+          console.error('❌ Transaction error syncing to IndexedDB:', event.target.error);
+          db.close();
+          resolve(false);
+        };
+      };
+      
+      dbRequest.onupgradeneeded = function(event) {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains('userData')) {
+          const objectStore = db.createObjectStore('userData', { keyPath: 'id' });
+          console.log('🆕 Created userData object store in IndexedDB');
+        }
+      };
+    });
+    
+  } catch (error) {
+    console.error('❌ Error syncing to IndexedDB:', error);
+    return false;
+  }
+}
+
+// Add event listeners for page unload
+function addSyncEventListeners() {
+  // Sync to IndexedDB when page visibility changes (user switches tabs/apps)
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'hidden') {
+      console.log('🔄 Page becoming hidden - syncing to IndexedDB...');
+      syncToIndexedDB();
+    }
+  });
+  
+  // Sync to IndexedDB when page is about to unload (backup)
+  window.addEventListener('beforeunload', function(event) {
+    console.log('🔄 Page unloading - syncing to IndexedDB...');
+    syncToIndexedDB();
+  });
+  
+  // Sync to IndexedDB when navigating away (fallback)
+  window.addEventListener('pagehide', function(event) {
+    console.log('🔄 Page hiding - syncing to IndexedDB...');
+    syncToIndexedDB();
+  });
+}
+
 // DOMContentLoaded event handler
 document.addEventListener('DOMContentLoaded', async function() {
   // Remove preload class to enable transitions after page is loaded
@@ -906,27 +1508,33 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.body.classList.remove('preload');
   }, 100);
   
-  // Data should already be in localStorage from profile.js fresh start
-  console.log('📊 Using data from localStorage...');
+  // First sync from IndexedDB to localStorage on page load
+  console.log('📥 Syncing from IndexedDB to localStorage on page load...');
+  await syncFromIndexedDB();
+  
+  // Then use the synced/existing localStorage data
+  console.log('📊 Using synced localStorage data...');
   
   // Show diagnostic alert with all required data
   await showDiagnosticAlert();
   
   handleActionForm();
   handleActionButtons();
+  handleTabSwitching(); // Initialize tab functionality
+  addSyncEventListeners(); // Add sync event listeners for page unload
   setActionButtonLabelsByMode();
   observeActionScreen();
   
-  // Update header with "Home"
-  const h1Field = document.querySelector('.header-field:first-child');
-  if (h1Field) {
-    h1Field.textContent = 'Home';
-  }
+  // Add H1 navigation event listener
+  document.getElementById('action-h1').addEventListener("click", () => {
+    window.location.href = "start.html";
+  });
   
   // Auto-load currentItems based on mode when page loads
+  console.log(`🎯 MODE CHECK: mode="${mode}", typeof mode="${typeof mode}"`);
   if (typeof mode !== 'undefined' && mode) {
     try {
-      console.log(`Loading items for mode: ${mode}`);
+      console.log(`🎯 LOADING ITEMS FOR MODE: "${mode}"`);
       await buildCurrentItems(mode);
       console.log(`Loaded ${currentItems.length} items for mode ${mode}`);
       
@@ -937,8 +1545,9 @@ document.addEventListener('DOMContentLoaded', async function() {
       // Load and display the first item
       await loadCurrentItem();
       
-      // Load recent events for development display
+      // Load initial tab data (events tab is active by default)
       await loadRecentEvents();
+      await loadLearnStats();
       
       // Start timer to update h3 time display every second
       setInterval(updateH3WithTime, 1000);
@@ -969,6 +1578,20 @@ function formatUnderscoreText(text, color = '#0066ff') {
   });
   
   return styledText;
+}
+
+// Format text for info field - converts "::" to line breaks
+function formatInfoText(text) {
+  // Validate input parameter
+  if (typeof text !== 'string') {
+    console.warn('formatInfoText: text parameter must be a string');
+    return '';
+  }
+  
+  // Replace "::" with HTML line breaks
+  const formattedText = text.replace(/::/g, '<br>');
+  
+  return formattedText;
 }
 
 // Show diagnostic alert with all data needed to understand why items aren't being presented

@@ -350,7 +350,173 @@ function calculatePrefix() {
   }
 }
 
+// Sync localStorage from IndexedDB on page load
+async function syncFromIndexedDB() {
+  try {
+    console.log('🔄 Syncing from IndexedDB to localStorage...');
+    
+    // Open IndexedDB connection
+    const dbRequest = indexedDB.open('FreshStartDB', 1);
+    
+    return new Promise((resolve, reject) => {
+      dbRequest.onerror = function(event) {
+        console.log('⚠️ IndexedDB not available, using existing localStorage data');
+        resolve(false);
+      };
+      
+      dbRequest.onsuccess = function(event) {
+        const db = event.target.result;
+        
+        // Check if userData object store exists
+        if (!db.objectStoreNames.contains('userData')) {
+          console.log('⚠️ userData object store not found, using existing localStorage data');
+          db.close();
+          resolve(false);
+          return;
+        }
+        
+        // Start transaction to read userData
+        const transaction = db.transaction(['userData'], 'readonly');
+        const objectStore = transaction.objectStore('userData');
+        
+        // Get all records
+        const getAllRequest = objectStore.getAll();
+        
+        getAllRequest.onerror = function(event) {
+          console.log('⚠️ Error reading from IndexedDB, using existing localStorage data');
+          db.close();
+          resolve(false);
+        };
+        
+        getAllRequest.onsuccess = function(event) {
+          const records = event.target.result;
+          
+          if (records.length > 0) {
+            console.log(`📥 Found ${records.length} userData records in IndexedDB`);
+            
+            // Convert records back to TSV format
+            let tsvContent = `# headerRow = 3\n# NRD = NextReviewDate in terms of sprintDay\nID\tNRD\tLEVEL\n`;
+            
+            // Sort records by ID to maintain order
+            records.sort((a, b) => {
+              const idA = parseInt(a.id) || 0;
+              const idB = parseInt(b.id) || 0;
+              return idA - idB;
+            });
+            
+            records.forEach(record => {
+              tsvContent += `${record.id}\t${record.nrd}\t${record.level}\n`;
+            });
+            
+            // Update localStorage with synced data
+            localStorage.setItem('userData', tsvContent);
+            console.log('✅ Synced userData from IndexedDB to localStorage');
+          } else {
+            console.log('📭 No userData records in IndexedDB, keeping localStorage data');
+          }
+          
+          db.close();
+          resolve(true);
+        };
+      };
+      
+      dbRequest.onupgradeneeded = function(event) {
+        console.log('💡 IndexedDB needs initialization, using existing localStorage data');
+        resolve(false);
+      };
+    });
+    
+  } catch (error) {
+    console.error('❌ Error syncing from IndexedDB:', error);
+    return false;
+  }
+}
+
+// Load and populate profile form from localStorage settings
+function loadProfileFromSettings() {
+  try {
+    const settingsContent = localStorage.getItem('settings');
+    if (!settingsContent) {
+      console.log('⚠️ No settings found in localStorage');
+      return;
+    }
+    
+    const lines = settingsContent.split(/\r\n|\r|\n/);
+    const settings = {};
+    
+    // Parse settings data
+    for (const line of lines) {
+      if (line && !line.startsWith('#') && !line.includes('KEY\tVALUE')) {
+        const parts = line.split('\t');
+        if (parts.length >= 2) {
+          settings[parts[0]] = parts[1];
+        }
+      }
+    }
+    
+    console.log('📄 Loaded settings:', settings);
+    
+    // Populate form fields
+    if (settings.nickname) {
+      const nicknameField = document.getElementById('nickname');
+      if (nicknameField) {
+        nicknameField.value = settings.nickname;
+        // Make read-only if already set
+        nicknameField.readOnly = true;
+        nicknameField.style.backgroundColor = '#f8f9fa';
+        nicknameField.style.color = '#666';
+      }
+    }
+    
+    if (settings.licence) {
+      const licenceField = document.getElementById('licence');
+      if (licenceField) {
+        licenceField.value = settings.licence;
+        // Make read-only if already set
+        licenceField.readOnly = true;
+        licenceField.style.backgroundColor = '#f8f9fa';
+        licenceField.style.color = '#666';
+      }
+    }
+    
+    if (settings.version) {
+      const versionField = document.getElementById('version');
+      if (versionField) {
+        versionField.value = settings.version;
+      }
+    }
+    
+    if (settings.prefix) {
+      const prefixField = document.getElementById('prefix');
+      if (prefixField) {
+        prefixField.value = settings.prefix;
+        // Make read-only if already set
+        prefixField.readOnly = true;
+        prefixField.style.backgroundColor = '#f8f9fa';
+        prefixField.style.color = '#666';
+      }
+    }
+    
+    // Show start date if available
+    if (settings.startDate) {
+      console.log(`📅 Start date: ${settings.startDate}`);
+    }
+    
+    console.log('✅ Profile form populated from settings');
+    
+  } catch (error) {
+    console.error('❌ Error loading profile from settings:', error);
+  }
+}
+
 // Initialize profile screen functionality
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+  // First sync from IndexedDB to localStorage on page load
+  console.log('📥 Syncing from IndexedDB to localStorage on profile page load...');
+  await syncFromIndexedDB();
+  
+  // Then load and populate the profile form
+  loadProfileFromSettings();
+  
   handleProfileForm();
 });

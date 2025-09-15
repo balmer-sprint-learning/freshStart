@@ -301,20 +301,4 @@ async function showOtherMenu() {
 // Initialize footer menus on page load
 document.addEventListener('DOMContentLoaded', function() {
   setupFooterMenus();
-  
-  // Update h1 with current mode value
-  updateH1WithMode();
 });
-
-// Update H1 header field with mode value
-function updateH1WithMode() {
-  const h1Field = document.querySelector('.header-field:first-child');
-  
-  if (h1Field) {
-    if (typeof mode !== 'undefined' && mode) {
-      h1Field.textContent = mode;
-    } else {
-      h1Field.textContent = 'home'; // fallback to default
-    }
-  }
-}

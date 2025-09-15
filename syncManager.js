@@ -214,22 +214,33 @@ class SyncManager {
             const stores = ['userData', 'improves', 'events'];
             
             for (const storeName of stores) {
-                const transaction = db.transaction([storeName], 'readonly');
-                const store = transaction.objectStore(storeName);
-                
-                const data = await new Promise((resolve, reject) => {
-                    const request = store.get('current');
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
-                
-                if (data && data.data) {
-                    // Only restore if localStorage is empty or older
-                    const currentData = localStorage.getItem(storeName);
-                    if (!currentData) {
-                        localStorage.setItem(storeName, data.data);
-                        console.log(`📥 Restored ${storeName} from IndexedDB`);
+                try {
+                    // Check if the object store exists
+                    if (!db.objectStoreNames.contains(storeName)) {
+                        console.log(`⚠️ Object store '${storeName}' not found in IndexedDB, skipping...`);
+                        continue;
                     }
+                    
+                    const transaction = db.transaction([storeName], 'readonly');
+                    const store = transaction.objectStore(storeName);
+                    
+                    const data = await new Promise((resolve, reject) => {
+                        const request = store.get('current');
+                        request.onsuccess = () => resolve(request.result);
+                        request.onerror = () => reject(request.error);
+                    });
+                    
+                    if (data && data.data) {
+                        // Only restore if localStorage is empty or older
+                        const currentData = localStorage.getItem(storeName);
+                        if (!currentData) {
+                            localStorage.setItem(storeName, data.data);
+                            console.log(`📥 Restored ${storeName} from IndexedDB`);
+                        }
+                    }
+                } catch (storeError) {
+                    console.log(`⚠️ Error accessing store '${storeName}':`, storeError.message);
+                    continue;
                 }
             }
             

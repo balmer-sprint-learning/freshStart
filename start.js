@@ -196,16 +196,6 @@ async function calculateRetentionPercentage() {
     return percentage;
 }
 
-// Update H1 header field with nickname
-async function updateH1WithNickname() {
-    const nickname = await findNickname();
-    const h1Field = document.querySelector('.header-field:first-child');
-    
-    if (h1Field) {
-        h1Field.textContent = nickname; // Will be 'nickname' default or actual nickname
-    }
-}
-
 // Update H2 header field with sprint day
 async function updateH2WithSprintDay() {
     const sprintDay = await calculateSprintDay();
