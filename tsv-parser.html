@@ -148,6 +148,15 @@
         </div>
         
         <div class="step">
+            <h2>Step 4: Convert JSON Back to TSV</h2>
+            <button id="jsonToTsvBtn" disabled>Convert to TSV and Download</button>
+            <div class="info">
+                Load data from local storage first, then convert back to TSV format for download.
+            </div>
+            <div id="conversionStatus"></div>
+        </div>
+        
+        <div class="step">
             <h2>Local Storage Manager</h2>
             <button id="loadBtn">Load "curriculum" from Local Storage</button>
             <button id="clearBtn">Clear "curriculum" from Local Storage</button>
@@ -165,6 +174,7 @@
         const downloadBtn = document.getElementById('downloadBtn');
         const loadBtn = document.getElementById('loadBtn');
         const clearBtn = document.getElementById('clearBtn');
+        const jsonToTsvBtn = document.getElementById('jsonToTsvBtn');
         
         // File input handler
         fileInput.addEventListener('change', function(e) {
@@ -188,6 +198,7 @@
                 displayPreview(parsedData);
                 saveBtn.disabled = false;
                 downloadBtn.disabled = false;
+                jsonToTsvBtn.disabled = false;
                 
                 document.getElementById('parseStatus').innerHTML = 
                     `<div class="success">Successfully parsed TSV file!</div>`;
@@ -239,6 +250,7 @@
                     displayPreview(parsedData);
                     saveBtn.disabled = false;
                     downloadBtn.disabled = false;
+                    jsonToTsvBtn.disabled = false;
                     document.getElementById('storageStatus').innerHTML = 
                         `<div class="success">Loaded "curriculum" from local storage!</div>`;
                 } else {
@@ -262,6 +274,89 @@
                     `<div class="error">Error clearing local storage: ${error.message}</div>`;
             }
         });
+        
+        // JSON to TSV conversion button handler
+        jsonToTsvBtn.addEventListener('click', function() {
+            try {
+                if (!parsedData) {
+                    document.getElementById('conversionStatus').innerHTML = 
+                        `<div class="error">No data loaded. Please load data from local storage first.</div>`;
+                    return;
+                }
+                
+                const tsvContent = convertToTSV(parsedData);
+                downloadTSV(tsvContent);
+                
+                document.getElementById('conversionStatus').innerHTML = 
+                    `<div class="success">TSV file generated and downloaded successfully!</div>`;
+            } catch (error) {
+                document.getElementById('conversionStatus').innerHTML = 
+                    `<div class="error">Error converting to TSV: ${error.message}</div>`;
+            }
+        });
+        
+        // Convert JSON data back to TSV format
+        function convertToTSV(parsedData) {
+            if (!parsedData || !parsedData.headers || !parsedData.data) {
+                throw new Error('Invalid data structure for TSV conversion');
+            }
+            
+            let tsvContent = '';
+            
+            // Add header row
+            tsvContent += parsedData.headers.join('\t') + '\n';
+            
+            // Add data rows
+            for (let i = 0; i < parsedData.data.length; i++) {
+                const row = parsedData.data[i];
+                const rowValues = [];
+                
+                // Get values in the same order as headers
+                for (let j = 0; j < parsedData.headers.length; j++) {
+                    const header = parsedData.headers[j];
+                    let value = row[header] || '';
+                    
+                    // Escape any tabs, newlines, or carriage returns in the data
+                    value = String(value)
+                        .replace(/\t/g, ' ')    // Replace tabs with spaces
+                        .replace(/\r/g, ' ')    // Replace carriage returns with spaces
+                        .replace(/\n/g, ' ');   // Replace newlines with spaces
+                    
+                    rowValues.push(value);
+                }
+                
+                // Add any extra columns that were in the original data
+                const extraColumns = Object.keys(row).filter(key => 
+                    !parsedData.headers.includes(key) && key.startsWith('extra_column_')
+                );
+                
+                for (const extraCol of extraColumns) {
+                    let value = row[extraCol] || '';
+                    value = String(value)
+                        .replace(/\t/g, ' ')
+                        .replace(/\r/g, ' ')
+                        .replace(/\n/g, ' ');
+                    rowValues.push(value);
+                }
+                
+                tsvContent += rowValues.join('\t') + '\n';
+            }
+            
+            return tsvContent;
+        }
+        
+        // Download TSV content as a file
+        function downloadTSV(tsvContent) {
+            const blob = new Blob([tsvContent], { type: 'text/tab-separated-values' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'curriculum.tsv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
         
         // TSV parsing function with comprehensive line ending support
         function parseTSV(content) {
