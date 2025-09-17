@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Progress Page</title>
+  <style>
+    :root {
+      --brand-color: rgb(0, 119, 123);
+      --header-footer-height: 10vh;
+      --margin-horizontal: 5vw;
+      --margin-vertical: 3vh;
+      --font-family: 'Arial Narrow', Arial, sans-serif;
+    }
+    body {
+      margin: 0;
+      background-color: var(--brand-color);
+      font-family: var(--font-family);
+      color: #000;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .header, .footer {
+      height: var(--header-footer-height);
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--margin-horizontal);
+      background-color: var(--brand-color);
+      color: white;
+      box-sizing: border-box;
+      font-weight: normal;
+      position: relative;
+    }
+    .header button, .footer button {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1rem;
+      cursor: pointer;
+      padding: 8px 12px;
+    }
+    .header .center-button,
+    .footer .center-button {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .main-content {
+      flex-grow: 1;
+      background-color: white;
+      margin-left: var(--margin-horizontal);
+      margin-right: var(--margin-horizontal);
+      margin-top: var(--margin-vertical);
+      margin-bottom: var(--margin-vertical);
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <header id="progress-header" class="header">
+    <button id="progress-header-left-button">Left</button>
+    <button id="progress-header-center-button" class="center-button">Center</button>
+    <button id="progress-header-right-button">Right</button>
+  </header>
+
+  <main id="progress-main" class="main-content">
+    <!-- Progress page content goes here -->
+  </main>
+
+  <footer id="progress-footer" class="footer">
+    <button id="progress-footer-left-button">Left</button>
+    <button id="progress-footer-center-button" class="center-button">Center</button>
+    <button id="progress-footer-right-button">Right</button>
+  </footer>
+
+  <script>
+    // Placeholder for any progress page specific JS
+  </script>
+</body>
+</html>
