@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Curriculum TSV Import & Preview</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  #results {
+    margin-top: 20px; border: 1px solid #ccc;
+    padding: 10px; white-space: pre-wrap; background:#f9f9f9;
+    min-height: 300px; /* Approx 15 lines */
+  }
+  label, select {
+    margin-left: 10px;
+    font-weight: bold;
+  }
+  .clearBtn {
+    margin-left: 8px;
+    padding: 4px 8px;
+    font-size: 0.9em;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Curriculum TSV Import & Preview</h1>
+
+<input type="file" id="tsvFile" accept=".tsv"/>
+<label for="storeSelect">Import to store:</label>
+<select id="storeSelect">
+  <option value="curriculum" selected>curriculum</option>
+  <option value="errors">errors</option>
+  <option value="listening">listening</option>
+  <option value="conjugations">conjugations</option>
+  <option value="composition">composition</option>
+  <option value="settings">settings</option>
+  <option value="improves">improves</option>
+  <option value="events">events</option>
+  <option value="userData">userData</option>
+</select>
+
+<button id="importBtn">Import TSV</button>
+<button id="runQuery9">Run Query 9</button>
+
+<h3>Clear Stores:</h3>
+<button class="clearBtn" data-store="curriculum">Clear Curriculum</button>
+<button class="clearBtn" data-store="errors">Clear Errors</button>
+<button class="clearBtn" data-store="listening">Clear Listening</button>
+<button class="clearBtn" data-store="conjugations">Clear Conjugations</button>
+<button class="clearBtn" data-store="composition">Clear Composition</button>
+<button class="clearBtn" data-store="settings">Clear Settings</button>
+<button class="clearBtn" data-store="improves">Clear Improves</button>
+<button class="clearBtn" data-store="events">Clear Events</button>
+<button class="clearBtn" data-store="userData">Clear userData</button>
+
+<div id="results">Select TSV and click "Import TSV".</div>
+
+<script type="module">
+  import IDBManager from './IDBManager.js';
+  window.IDBManager = IDBManager;
+
+  const fileInput = document.getElementById('tsvFile');
+  const storeSelect = document.getElementById('storeSelect');
+  const importBtn = document.getElementById('importBtn');
+  const runQuery9Btn = document.getElementById('runQuery9');
+  const resultsDiv = document.getElementById('results');
+
+  let tsvContent = '';
+
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    tsvContent = await file.text();
+    resultsDiv.textContent = 'TSV loaded. Select store and click "Import TSV".';
+  });
+
+  importBtn.addEventListener('click', async () => {
+    if (!tsvContent) {
+      resultsDiv.textContent = 'Please select a TSV file first.';
+      return;
+    }
+    const storeName = storeSelect.value;
+    try {
+      const lines = tsvContent.trim().split('\n');
+      const headers = lines[0].split('\t').map(h => h.trim());
+      const records = lines.slice(1).map(line => {
+        const values = line.split('\t').map(v => v.trim());
+        let obj = {};
+        headers.forEach((h,i) => { obj[h] = values[i]; });
+        // Validate and convert id to Number if present
+        if ('id' in obj) {
+          if (obj.id === undefined || obj.id === '' || isNaN(Number(obj.id))) {
+            throw new Error('Record missing valid id: ' + JSON.stringify(obj));
+          }
+          obj.id = Number(obj.id);
+        }
+        return obj;
+      });
+
+      const db = await IDBManager.openDB();
+      const tx = db.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
+
+      for (const rec of records) {
+        await new Promise((resolve, reject) => {
+          const req = store.put(rec);
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+      }
+      await new Promise((resolve, reject) => {
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error);
+      });
+
+      resultsDiv.textContent = `Imported ${records.length} records into "${storeName}". Showing first 3:\n`;
+      const displayLines = [];
+      displayLines.push(headers.join('\t'));
+      for (let i = 0; i < Math.min(2, records.length); i++) {
+        displayLines.push(headers.map(h => records[i][h]).join('\t'));
+      }
+      resultsDiv.textContent += displayLines.join('\n') + '\n\n';
+
+      // Query first record from store to verify
+      const queryTx = db.transaction(storeName, 'readonly');
+      const queryStore = queryTx.objectStore(storeName);
+      const firstRecord = await new Promise((resolve, reject) => {
+        const request = queryStore.openCursor();
+        request.onsuccess = e => {
+          const cursor = e.target.result;
+          if (cursor) {
+            resolve(cursor.value);
+          } else {
+            resolve(null);
+          }
+        };
+        request.onerror = e => reject(e.target.error);
+      });
+
+      if (firstRecord) {
+        resultsDiv.textContent += `First record in "${storeName}" store (via query):\n` + JSON.stringify(firstRecord, null, 2);
+      } else {
+        resultsDiv.textContent += `No records found in "${storeName}" store.`;
+      }
+    } catch (error) {
+      resultsDiv.textContent = `Import error in "${storeName}": ${error.message}`;
+    }
+  });
+
+  runQuery9Btn.addEventListener('click', async () => {
+    resultsDiv.textContent = 'Running Query 9 for ID=1 in "curriculum" store...';
+    try {
+      const row = await IDBManager.getCurriculumById(1);
+      if (row) {
+        resultsDiv.textContent = JSON.stringify(row, null, 2);
+      } else {
+        resultsDiv.textContent = 'No record found with ID 1.';
+      }
+    } catch (err) {
+      resultsDiv.textContent = 'Query 9 error: ' + err.message;
+    }
+  });
+
+  document.querySelectorAll('.clearBtn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const storeName = btn.dataset.store;
+      try {
+        const db = await IDBManager.openDB();
+        const tx = db.transaction(storeName, 'readwrite');
+        const store = tx.objectStore(storeName);
+        await new Promise((resolve, reject) => {
+          const req = store.clear();
+          req.onsuccess = () => resolve();
+          req.onerror = () => reject(req.error);
+        });
+        await new Promise((resolve, reject) => {
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+          tx.onabort = () => reject(tx.error);
+        });
+        resultsDiv.textContent = `Store "${storeName}" cleared.`;
+      } catch (err) {
+        resultsDiv.textContent = `Error clearing "${storeName}": ${err.message}`;
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
